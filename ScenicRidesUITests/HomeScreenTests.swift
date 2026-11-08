@@ -2,8 +2,9 @@ import XCTest
 
 final class HomeScreenTests: XCTestCase {
     @MainActor
-    func testHomeAndRidePreferenceHandoff() throws {
+    func testHomeAndRoutePreviewHandoff() throws {
         let app = XCUIApplication()
+        app.launchEnvironment["SCENIC_ROUTE_TEST_SCENARIO"] = "ready"
         app.launch()
         XCTAssertTrue(app.buttons["startingPoint"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.staticTexts["Returns to your starting point"].exists)
@@ -13,15 +14,10 @@ final class HomeScreenTests: XCTestCase {
         XCTAssertTrue(picker.buttons["60 min"].isSelected)
         picker.buttons["90 min"].tap()
         app.buttons["findRide"].tap()
-        XCTAssertTrue(app.navigationBars["Ride preferences"].waitForExistence(timeout: 5))
-        let selectedLength = app.descendants(matching: .any)["selectedRideLength"]
-        XCTAssertTrue(selectedLength.exists)
-        XCTAssertTrue(
-            selectedLength.label.contains("90 minutes") || (selectedLength.value as? String)?.contains("90 minutes") == true,
-            app.debugDescription
-        )
-        XCTAssertTrue(app.staticTexts["Austin, TX"].exists)
-        app.buttons["Done"].tap()
+        XCTAssertTrue(app.staticTexts["routeTarget"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["routeTarget"].label.contains("90 min target"))
+        XCTAssertTrue(app.staticTexts["routeReturn"].label.contains("Austin, TX"))
+        app.buttons["closeRoutePreview"].tap()
         XCTAssertTrue(picker.buttons["90 min"].isSelected)
         saveScreenshot(app, name: "Home screen")
     }
@@ -44,6 +40,7 @@ final class HomeScreenTests: XCTestCase {
     @MainActor
     func testLargeTextKeepsPrimaryActionReachable() throws {
         let app = XCUIApplication()
+        app.launchEnvironment["SCENIC_ROUTE_TEST_SCENARIO"] = "ready"
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
         let action = app.buttons["findRide"]
@@ -56,7 +53,7 @@ final class HomeScreenTests: XCTestCase {
         XCTAssertLessThanOrEqual(action.frame.maxY, app.frame.maxY - 40)
         saveScreenshot(app, name: "Large text home screen")
         action.tap()
-        XCTAssertTrue(app.navigationBars["Ride preferences"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Your round trip"].waitForExistence(timeout: 5))
     }
 
     @MainActor

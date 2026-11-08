@@ -5,6 +5,81 @@
 	};
 	"objectVersion" = 77;
 	"objects" = {
+		"A2821FD8BC347DC726A95308" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.cfbundle";
+			"path" = "ScenicRidesTests.xctest";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"CD77FAFF7F0558A5FEE49152" = {
+			"isa" = "PBXFileSystemSynchronizedRootGroup";
+			"path" = "ScenicRidesTests";
+			"sourceTree" = "<group>";
+		};
+		"1A1ECFBCA23CEF4D0D247720" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "app.scenicrides.ios.tests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"TARGETED_DEVICE_FAMILY" = "1";
+				"TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/ScenicRides.app/ScenicRides";
+				"BUNDLE_LOADER" = "$(TEST_HOST)";
+				"LD_RUNPATH_SEARCH_PATHS" = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+			};
+		};
+		"5143A51A951C042B1B815443" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "app.scenicrides.ios.tests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"TARGETED_DEVICE_FAMILY" = "1";
+				"TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/ScenicRides.app/ScenicRides";
+				"BUNDLE_LOADER" = "$(TEST_HOST)";
+				"LD_RUNPATH_SEARCH_PATHS" = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+			};
+		};
+		"3FCF2182DE8BD4EDD2732D4B" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("1A1ECFBCA23CEF4D0D247720", "5143A51A951C042B1B815443");
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Release";
+		};
+		"D7F29560E758C075485A65F2" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"346B1A9020CDE6CDE38F185F" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"8920CF592C03E733D44E9A91" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"C7F6D175E0F9B22C40D4FB51" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "3FCF2182DE8BD4EDD2732D4B";
+			"buildPhases" = ("D7F29560E758C075485A65F2", "346B1A9020CDE6CDE38F185F", "8920CF592C03E733D44E9A91");
+			"buildRules" = ();
+			"dependencies" = ("F9A94CEF8CF7D85CE881E703");
+			"fileSystemSynchronizedGroups" = ("CD77FAFF7F0558A5FEE49152");
+			"name" = "ScenicRidesTests";
+			"productName" = "ScenicRidesTests";
+			"productReference" = "A2821FD8BC347DC726A95308";
+			"productType" = "com.apple.product-type.bundle.unit-test";
+		};
 		"681C948D238C526E9E3424E0" = {
 			"isa" = "PBXFileReference";
 			"explicitFileType" = "wrapper.application";
@@ -29,13 +104,13 @@
 		};
 		"0A3E27B8CA818264D75C8D81" = {
 			"isa" = "PBXGroup";
-			"children" = ("681C948D238C526E9E3424E0", "F739566ED5280322FF98A798");
+			"children" = ("681C948D238C526E9E3424E0", "F739566ED5280322FF98A798", "A2821FD8BC347DC726A95308");
 			"name" = "Products";
 			"sourceTree" = "<group>";
 		};
 		"19F479106CE8C3BA8C106518" = {
 			"isa" = "PBXGroup";
-			"children" = ("B7CE2F2A12ECBD44886DC7C1", "15C00D766734B11852E789C8", "0A3E27B8CA818264D75C8D81");
+			"children" = ("B7CE2F2A12ECBD44886DC7C1", "15C00D766734B11852E789C8", "CD77FAFF7F0558A5FEE49152", "0A3E27B8CA818264D75C8D81");
 			"sourceTree" = "<group>";
 		};
 		"2A04C20BF6D5C20A63A1D4CC" = {
@@ -267,7 +342,7 @@
 			"productRefGroup" = "0A3E27B8CA818264D75C8D81";
 			"projectDirPath" = "";
 			"projectRoot" = "";
-			"targets" = ("C1E9827DB735CA9BAA54A540", "9805CBD60EB4F66728D5D195");
+			"targets" = ("C1E9827DB735CA9BAA54A540", "9805CBD60EB4F66728D5D195", "C7F6D175E0F9B22C40D4FB51");
 		};
 	};
 	"rootObject" = "244210E48437B6556980A702";

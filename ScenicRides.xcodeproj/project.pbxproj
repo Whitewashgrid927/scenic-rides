@@ -1,0 +1,274 @@
+// !$*UTF8*$!
+{
+	"archiveVersion" = 1;
+	"classes" = {
+	};
+	"objectVersion" = 77;
+	"objects" = {
+		"681C948D238C526E9E3424E0" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"path" = "ScenicRides.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"F739566ED5280322FF98A798" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.cfbundle";
+			"path" = "ScenicRidesUITests.xctest";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"B7CE2F2A12ECBD44886DC7C1" = {
+			"isa" = "PBXFileSystemSynchronizedRootGroup";
+			"path" = "ScenicRides";
+			"sourceTree" = "<group>";
+		};
+		"15C00D766734B11852E789C8" = {
+			"isa" = "PBXFileSystemSynchronizedRootGroup";
+			"path" = "ScenicRidesUITests";
+			"sourceTree" = "<group>";
+		};
+		"0A3E27B8CA818264D75C8D81" = {
+			"isa" = "PBXGroup";
+			"children" = ("681C948D238C526E9E3424E0", "F739566ED5280322FF98A798");
+			"name" = "Products";
+			"sourceTree" = "<group>";
+		};
+		"19F479106CE8C3BA8C106518" = {
+			"isa" = "PBXGroup";
+			"children" = ("B7CE2F2A12ECBD44886DC7C1", "15C00D766734B11852E789C8", "0A3E27B8CA818264D75C8D81");
+			"sourceTree" = "<group>";
+		};
+		"2A04C20BF6D5C20A63A1D4CC" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "app.scenicrides.ios";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"MARKETING_VERSION" = "0.1.0";
+				"TARGETED_DEVICE_FAMILY" = "1";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"INFOPLIST_KEY_CFBundleDisplayName" = "Scenic Rides";
+				"INFOPLIST_KEY_UILaunchScreen_Generation" = "YES";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation" = "YES";
+				"INFOPLIST_KEY_UISupportedInterfaceOrientations" = "UIInterfaceOrientationPortrait";
+				"INFOPLIST_KEY_UIUserInterfaceStyle" = "Dark";
+				"INFOPLIST_KEY_NSLocationWhenInUseUsageDescription" = "Use your location as the starting point for a scenic round trip.";
+				"ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME" = "AccentColor";
+				"LD_RUNPATH_SEARCH_PATHS" = ("$(inherited)", "@executable_path/Frameworks");
+				"ENABLE_PREVIEWS" = "YES";
+			};
+		};
+		"E28089EB494F94D6F9770EC2" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "app.scenicrides.ios";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"CURRENT_PROJECT_VERSION" = "1";
+				"MARKETING_VERSION" = "0.1.0";
+				"TARGETED_DEVICE_FAMILY" = "1";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD" = "NO";
+				"INFOPLIST_KEY_CFBundleDisplayName" = "Scenic Rides";
+				"INFOPLIST_KEY_UILaunchScreen_Generation" = "YES";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation" = "YES";
+				"INFOPLIST_KEY_UISupportedInterfaceOrientations" = "UIInterfaceOrientationPortrait";
+				"INFOPLIST_KEY_UIUserInterfaceStyle" = "Dark";
+				"INFOPLIST_KEY_NSLocationWhenInUseUsageDescription" = "Use your location as the starting point for a scenic round trip.";
+				"ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME" = "AccentColor";
+				"LD_RUNPATH_SEARCH_PATHS" = ("$(inherited)", "@executable_path/Frameworks");
+				"ENABLE_PREVIEWS" = "YES";
+			};
+		};
+		"E5ED76C2E993743F2937D61D" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("2A04C20BF6D5C20A63A1D4CC", "E28089EB494F94D6F9770EC2");
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Release";
+		};
+		"B27BF1F296178E69D04DF361" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"6DB34C0D0A1DEF1D942309D5" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"5BFC0846D4EBD9B4F51F8329" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"C1E9827DB735CA9BAA54A540" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "E5ED76C2E993743F2937D61D";
+			"buildPhases" = ("B27BF1F296178E69D04DF361", "6DB34C0D0A1DEF1D942309D5", "5BFC0846D4EBD9B4F51F8329");
+			"buildRules" = ();
+			"dependencies" = ();
+			"fileSystemSynchronizedGroups" = ("B7CE2F2A12ECBD44886DC7C1");
+			"name" = "ScenicRides";
+			"productName" = "ScenicRides";
+			"productReference" = "681C948D238C526E9E3424E0";
+			"productType" = "com.apple.product-type.application";
+		};
+		"DAB01D73CBBCF1FEDE84E2D6" = {
+			"isa" = "PBXContainerItemProxy";
+			"containerPortal" = "244210E48437B6556980A702";
+			"proxyType" = 1;
+			"remoteGlobalIDString" = "C1E9827DB735CA9BAA54A540";
+			"remoteInfo" = "ScenicRides";
+		};
+		"F9A94CEF8CF7D85CE881E703" = {
+			"isa" = "PBXTargetDependency";
+			"target" = "C1E9827DB735CA9BAA54A540";
+			"targetProxy" = "DAB01D73CBBCF1FEDE84E2D6";
+		};
+		"12946E3301F628EAC49744B8" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "app.scenicrides.ios.uitests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"TARGETED_DEVICE_FAMILY" = "1";
+				"TEST_TARGET_NAME" = "ScenicRides";
+				"LD_RUNPATH_SEARCH_PATHS" = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+			};
+		};
+		"42EE86C84AAD61C6F57FBD29" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "$(TARGET_NAME)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "app.scenicrides.ios.uitests";
+				"GENERATE_INFOPLIST_FILE" = "YES";
+				"CODE_SIGN_STYLE" = "Automatic";
+				"TARGETED_DEVICE_FAMILY" = "1";
+				"TEST_TARGET_NAME" = "ScenicRides";
+				"LD_RUNPATH_SEARCH_PATHS" = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks");
+			};
+		};
+		"068680CE6158F3762E37603D" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("12946E3301F628EAC49744B8", "42EE86C84AAD61C6F57FBD29");
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Release";
+		};
+		"9C1371F6C41139DBA0E845D0" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"3525013E6212AE50B0D93560" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"9E09B46BE9601A8B900B7D04" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = 2147483647;
+			"files" = ();
+			"runOnlyForDeploymentPostprocessing" = 0;
+		};
+		"9805CBD60EB4F66728D5D195" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "068680CE6158F3762E37603D";
+			"buildPhases" = ("9C1371F6C41139DBA0E845D0", "3525013E6212AE50B0D93560", "9E09B46BE9601A8B900B7D04");
+			"buildRules" = ();
+			"dependencies" = ("F9A94CEF8CF7D85CE881E703");
+			"fileSystemSynchronizedGroups" = ("15C00D766734B11852E789C8");
+			"name" = "ScenicRidesUITests";
+			"productName" = "ScenicRidesUITests";
+			"productReference" = "F739566ED5280322FF98A798";
+			"productType" = "com.apple.product-type.bundle.ui-testing";
+		};
+		"488864B3D19480A82F7F1786" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Debug";
+			"buildSettings" = {
+				"SDKROOT" = "iphoneos";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "26.0";
+				"SWIFT_VERSION" = "6.0";
+				"CLANG_ENABLE_MODULES" = "YES";
+				"CLANG_ENABLE_OBJC_ARC" = "YES";
+				"ENABLE_USER_SCRIPT_SANDBOXING" = "YES";
+				"GCC_C_LANGUAGE_STANDARD" = "gnu17";
+				"CLANG_CXX_LANGUAGE_STANDARD" = "gnu++20";
+				"SWIFT_STRICT_CONCURRENCY" = "complete";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+				"ENABLE_TESTABILITY" = "YES";
+				"ONLY_ACTIVE_ARCH" = "YES";
+			};
+		};
+		"35B1014F135DE9B45529B733" = {
+			"isa" = "XCBuildConfiguration";
+			"name" = "Release";
+			"buildSettings" = {
+				"SDKROOT" = "iphoneos";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "26.0";
+				"SWIFT_VERSION" = "6.0";
+				"CLANG_ENABLE_MODULES" = "YES";
+				"CLANG_ENABLE_OBJC_ARC" = "YES";
+				"ENABLE_USER_SCRIPT_SANDBOXING" = "YES";
+				"GCC_C_LANGUAGE_STANDARD" = "gnu17";
+				"CLANG_CXX_LANGUAGE_STANDARD" = "gnu++20";
+				"SWIFT_STRICT_CONCURRENCY" = "complete";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-O";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
+			};
+		};
+		"442D61E217DD044EA4245BF2" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("488864B3D19480A82F7F1786", "35B1014F135DE9B45529B733");
+			"defaultConfigurationIsVisible" = 0;
+			"defaultConfigurationName" = "Release";
+		};
+		"244210E48437B6556980A702" = {
+			"isa" = "PBXProject";
+			"attributes" = {
+				"BuildIndependentTargetsInParallel" = "YES";
+				"LastSwiftUpdateCheck" = "2600";
+				"LastUpgradeCheck" = "2600";
+				"TargetAttributes" = {
+					"C1E9827DB735CA9BAA54A540" = {
+						"CreatedOnToolsVersion" = "26.0";
+					};
+					"9805CBD60EB4F66728D5D195" = {
+						"CreatedOnToolsVersion" = "26.0";
+						"TestTargetID" = "C1E9827DB735CA9BAA54A540";
+					};
+				};
+			};
+			"buildConfigurationList" = "442D61E217DD044EA4245BF2";
+			"developmentRegion" = "en";
+			"hasScannedForEncodings" = 0;
+			"knownRegions" = ("en", "Base");
+			"mainGroup" = "19F479106CE8C3BA8C106518";
+			"minimizedProjectReferenceProxies" = 1;
+			"preferredProjectObjectVersion" = 77;
+			"productRefGroup" = "0A3E27B8CA818264D75C8D81";
+			"projectDirPath" = "";
+			"projectRoot" = "";
+			"targets" = ("C1E9827DB735CA9BAA54A540", "9805CBD60EB4F66728D5D195");
+		};
+	};
+	"rootObject" = "244210E48437B6556980A702";
+}

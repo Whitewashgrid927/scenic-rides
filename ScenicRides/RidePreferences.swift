@@ -46,5 +46,66 @@ struct RideRequest: Identifiable {
     let id = UUID()
     let startingPlace: StartingPlace
     let duration: RideDuration
+    var style: RideStyle = .water
+    var options = RideOptions()
     // Every ride in this version returns to its starting point.
+}
+
+enum RideStyle: String, CaseIterable, Identifiable {
+    case water, hills, city, surprise
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .water: "Water views"
+        case .hills: "Hills & curves"
+        case .city: "City lights"
+        case .surprise: "Surprise me"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .water: "water.waves"
+        case .hills: "mountain.2"
+        case .city: "building.2"
+        case .surprise: "shuffle"
+        }
+    }
+}
+
+enum RidePace: String, CaseIterable, Identifiable {
+    case drive, stop
+    var id: String { rawValue }
+    var name: String { self == .drive ? "Just drive" : "Include a stop" }
+}
+
+enum RideStopKind: String, CaseIterable, Identifiable {
+    case coffee, view, walk
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .coffee: "Coffee"
+        case .view: "A view"
+        case .walk: "A short walk"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .coffee: "cup.and.saucer"
+        case .view: "mountain.2"
+        case .walk: "figure.walk"
+        }
+    }
+}
+
+struct RoadPreferences: Equatable {
+    var avoidHighways = false
+    var avoidTolls = true
+}
+
+struct RideOptions: Equatable {
+    var pace: RidePace = .drive
+    var stopKind: RideStopKind = .view
+    var roads = RoadPreferences()
+
+    var summary: String { pace == .drive ? pace.name : "Stop for \(stopKind.name.lowercased())" }
 }

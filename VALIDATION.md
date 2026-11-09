@@ -9,48 +9,48 @@
 - No Swift compiler errors or warnings. Xcode emits its routine App Intents metadata-extraction warning because the app has no App Intents dependency.
 - Project property-list syntax and `git diff --check` pass.
 
-The available simulator runtime is iOS 27.0. iOS 26 API availability is checked by compilation with a 26.0 deployment target; a separate iOS 26 runtime and a physical device have not been tested.
+The available runtime is iOS 27.0. iOS 26 API availability is checked by compilation with a 26.0 deployment target; a separate iOS 26 runtime and a physical device have not been tested.
 
 ## Automated coverage
 
-Six unit tests cover:
+**10 unit tests and 12 UI tests pass across the main run and focused reruns.** The route/options suite was rerun after fixing the switch tap target and keeping Apply visible at accessibility text sizes. Focused options and live-routing checks were repeated after the final layout and address-query refinements.
 
-1. Each duration's loop starts at the selected coordinate and calculates the final return leg. Distance and driving time include all four legs, and later departure estimates incorporate earlier travel times. The actual ETA remains independent of the duration target. Map bounds include all waypoints.
-2. A failed return leg leaves no partial route; retry can recover.
-3. Starting at a highlight skips its zero-length network request and preserves the complete trip.
-4. An unsupported starting point is rejected before any map-service calls.
-5. A late response from an older request cannot replace the current route.
-6. A cancelled response is discarded.
+Unit coverage includes:
 
-Ten UI tests cover:
+- All six loops return to the selected coordinate, sum every leg's distance and time, and advance later departure estimates.
+- Every loop and optional stop combination contains exactly one stop and passes road preferences to all five driving legs, including the return.
+- Actual `MKDirections.Request` objects receive the correct highway and toll preferences for both toggle states.
+- Each scenic style offers distinct alternatives; Surprise me includes all three styles.
+- Retrying a failed alternative preserves completed routes; a new request clears cached choices.
+- Failed return legs never publish partial round trips, coincident waypoints skip zero-length requests, and unsupported starts fail before network work.
+- Cancelled and stale completions are discarded.
 
-- Home defaults, duration selection, preview handoff, and preserving preferences after returning.
-- Starting-point selection and cancellation.
-- Live search for a public Austin attraction.
-- Explicit location permission and denial recovery, with no permission request on launch.
-- Home action reachability at the largest accessibility text size.
-- Preview time versus duration target, matching start/return in the stops sheet, and changing loops.
-- Error state and retry with preferences preserved.
-- Leaving the preview during loading.
-- Preview action reachability and opening stops at the largest accessibility text size.
-- Live MapKit directions for all three Austin loops, with route estimates and map framing controls available.
+UI coverage includes:
 
-Results combine the main test run and targeted reruns for live routing and the largest-text layout. The live test waits for each completed route rather than requiring a transient loading state. All six unit tests and all ten UI scenarios passed across those runs.
+- Home defaults, duration selection, handoff, and preserving preferences after returning.
+- Starting-point selection/cancellation, live public-place search, and location permission denial recovery.
+- Primary action reachability at the largest accessibility text size on home and route preview; Apply remains reachable in the options sheet.
+- Swiping selects another card and its matching itinerary; pagination can select the previous route again.
+- Ride style selection, optional coffee stops, highway toggle persistence, Apply, and Cancel.
+- Per-card errors, successful alternatives, retry, and leaving during loading.
+- Three alternatives for Surprise me.
+- Live MapKit directions for all six catalog loops, plus a coffee-stop route with Avoid highways enabled.
 
-The live search and directions checks require Apple's services. Other route UI scenarios use a debug-only fixture planner; the Release build excludes that planner and its environment flag. No simulated route is used in the published route screenshot.
+The live search and directions checks require Apple's services. Other preview UI tests use a debug-only fixture planner. The Release binary excludes the fixture planner and its environment flag. No simulated route is used in the published route screenshot. The view and walk stop combinations have unit coverage; this delivery's live stop smoke test covers coffee.
 
 ## Visual verification
 
-- Inspected simulator captures of all three live road-following routes, plus the largest-text preview.
-- Confirmed route markers, complete map framing, visible Apple Maps attribution, and a legible dark summary panel.
-- Bounded the numbered marker badges' text scaling so numbers stay inside their circles at accessibility sizes. The panel continues to scale and scroll.
-- Navigation toolbar controls use the native system appearance. Primary and alternate actions use `.glassProminent` and `.glass`; the bottom content panel uses `.regularMaterial`.
-- Included [home screenshot](docs/home-screen.png) and [live route screenshot](docs/route-preview.png), using the generic Austin starting point. Image metadata is stripped; pixel content is preserved.
+- Inspected simulator captures of the home screen, native options sheet, all six live routes, and the largest-text options/preview layouts.
+- Confirmed native glass cards, visible selected state, card peeking and pagination, road polylines, real estimates, Apple Maps attribution, and the itinerary action.
+- Inspected live address-search results for the road catalog. Normalized the downtown intersection queries so Lamar and the Capitol district resolve to their named intersections; Scenic Drive uses a road waypoint.
+- Choice grids become one column at accessibility sizes; panels and the options form scroll. Stop cards use a shared scaled minimum height.
+- Toolbar controls retain the native system appearance. Cards and buttons use `.glass` and `.glassProminent`; content panels use `.regularMaterial`.
+- Included [home](docs/home-screen.png), [live route preview](docs/route-preview.png), and [options sheet](docs/ride-options.png) screenshots with the generic Austin starting point. Image metadata is stripped and pixel content is preserved.
 
 ## Scope and privacy
 
-Routes are curated around public Austin attractions; MapKit chooses connecting roads and estimates driving time. Duration is a target, stops add time, and routes may retrace roads. Vehicle connectivity, booking, in-ride guidance, and automatic duration optimization are not included.
+Routes use a small curated catalog of public Austin roads and destinations. MapKit chooses connecting roads and estimates driving time. Duration remains a target, stop time is extra, and routes may retrace roads. Road avoidance is a preference rather than a guarantee. Vehicle connectivity, booking, in-ride guidance, opening-hours checks, and duration optimization are not included.
 
 Live device GPS acquisition remains untested. Map tiles, directions, estimates, and Liquid Glass appearance can vary with connectivity, OS version, traffic, and accessibility settings.
 
-Personal addresses, identity metadata, credentials, signing files, local build paths, test logs, and raw result bundles are excluded from the repository. Only the approved GitHub handle and noreply commit attribution are retained.
+Personal addresses, identity metadata, credentials, signing files, local paths, logs, and raw test results are excluded from the repository. Only the approved GitHub handle and noreply commit attribution are retained. Public screenshots use the generic city starting point, not a device location.

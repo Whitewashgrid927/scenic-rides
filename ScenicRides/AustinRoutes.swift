@@ -5,40 +5,72 @@ struct RouteAnchor: Identifiable {
     let name: String
     let address: String
     var note: String? = nil
+    var isStop = false
 
-    var searchQuery: String { "\(name), \(address), Austin, Texas" }
+    var searchQuery: String {
+        isStop ? "\(name), \(address), Austin, Texas" : "\(address), Austin, Texas"
+    }
 }
 
-/// Public places only. The duration chooses an initial loop, not a promised ETA.
+/// Public roads and intersections shape drive-only loops; a selected stop is added separately.
 enum AustinLoop: Int, CaseIterable, Identifiable {
-    case parks, hills, lake
-
+    case parks, riverside, hills, lake, skyline, eastside
     var id: Int { rawValue }
 
-    static func suggested(for duration: RideDuration) -> Self {
-        switch duration {
-        case .thirty: .parks
-        case .sixty: .hills
-        case .ninety: .lake
+    static func suggestions(style: RideStyle, duration: RideDuration) -> [Self] {
+        let choices: [Self]
+        switch style {
+        case .water: choices = [.parks, .riverside]
+        case .hills: choices = [.hills, .lake]
+        case .city: choices = [.skyline, .eastside]
+        case .surprise:
+            // One choice from each style, chosen once when the preview is created.
+            return [duration == .ninety ? .riverside : .parks,
+                    duration == .ninety ? .lake : .hills,
+                    duration == .ninety ? .eastside : .skyline].shuffled()
+        }
+        return duration == .ninety ? choices.reversed() : choices
+    }
+
+    var style: RideStyle {
+        switch self {
+        case .parks, .riverside: .water
+        case .hills, .lake: .hills
+        case .skyline, .eastside: .city
         }
     }
 
-    var next: Self { Self(rawValue: (rawValue + 1) % Self.allCases.count)! }
-
     var name: String {
         switch self {
-        case .parks: "Parks & skyline"
+        case .parks: "Lake & skyline"
+        case .riverside: "Riverside loop"
         case .hills: "Hills & river"
-        case .lake: "Around Lake Austin"
+        case .lake: "Westlake wander"
+        case .skyline: "City & skyline"
+        case .eastside: "East Austin loop"
         }
     }
 
     var anchors: [RouteAnchor] {
         switch self {
-        case .parks: [.auditoriumShores, .zilker, .deepEddy]
-        case .hills: [.redBud, .mountBonnell, .bullCreek]
-        case .lake: [.mountBonnell, .emmaLong, .redBud]
+        case .parks: [.bartonSprings, .lakeAustin, .riversideRoad]
+        case .riverside: [.lakeshore, .pleasantValley, .riversideRoad]
+        case .hills: [.lakeAustin, .scenicDrive, .bonnellRoad]
+        case .lake: [.redbudRoad, .westlakeDrive, .beeCaves]
+        case .skyline: [.southCongress, .capitol, .lamar]
+        case .eastside: [.eastSixth, .chicon, .holly]
         }
+    }
+
+    func anchors(options: RideOptions) -> [RouteAnchor] {
+        guard options.pace == .stop else { return anchors }
+        let stop: RouteAnchor
+        switch options.stopKind {
+        case .coffee: stop = .coffee
+        case .view: stop = .mountBonnell
+        case .walk: stop = .butlerPark
+        }
+        return anchors + [stop]
     }
 
     static func supports(_ coordinate: CLLocationCoordinate2D) -> Bool {
@@ -49,13 +81,25 @@ enum AustinLoop: Int, CaseIterable, Identifiable {
 }
 
 private extension RouteAnchor {
-    static let auditoriumShores = Self(id: "auditorium", name: "Auditorium Shores", address: "800 W Riverside Dr")
-    static let zilker = Self(id: "zilker", name: "Zilker Metropolitan Park", address: "2100 Barton Springs Rd")
-    static let deepEddy = Self(id: "deep-eddy", name: "Deep Eddy Pool", address: "401 Deep Eddy Ave")
-    static let redBud = Self(id: "red-bud", name: "Red Bud Isle", address: "3401 Redbud Trl")
-    static let mountBonnell = Self(id: "bonnell", name: "Mount Bonnell", address: "3800 Mount Bonnell Rd", note: "The overlook is reached on foot.")
-    static let bullCreek = Self(id: "bull-creek", name: "Bull Creek District Park", address: "6701 Lakewood Dr")
-    static let emmaLong = Self(id: "emma-long", name: "Emma Long Metropolitan Park", address: "1600 City Park Rd", note: "Park entry requires a day pass.")
+    static let bartonSprings = Self(id: "barton-road", name: "Barton Springs Road", address: "Barton Springs Road & Azie Morton Road")
+    static let lakeAustin = Self(id: "lake-road", name: "Lake Austin Boulevard", address: "Lake Austin Boulevard & Exposition Boulevard")
+    static let riversideRoad = Self(id: "riverside-road", name: "Riverside Drive", address: "West Riverside Drive & South First Street")
+    static let lakeshore = Self(id: "lakeshore-road", name: "Lakeshore Boulevard", address: "Lakeshore Boulevard & South Pleasant Valley Road")
+    static let pleasantValley = Self(id: "pleasant-road", name: "Pleasant Valley Road", address: "South Pleasant Valley Road & East Cesar Chavez Street")
+    static let scenicDrive = Self(id: "scenic-road", name: "Scenic Drive", address: "Scenic Drive")
+    static let bonnellRoad = Self(id: "bonnell-road", name: "Mount Bonnell Road", address: "Mount Bonnell Road & Mount Bonnell Drive")
+    static let redbudRoad = Self(id: "redbud-road", name: "Redbud Trail", address: "Redbud Trail & Lake Austin Boulevard")
+    static let westlakeDrive = Self(id: "westlake-road", name: "Westlake Drive", address: "Westlake Drive & Redbud Trail")
+    static let beeCaves = Self(id: "bee-caves-road", name: "Bee Caves Road", address: "Bee Caves Road & Westlake Drive")
+    static let southCongress = Self(id: "congress-road", name: "South Congress", address: "South Congress Avenue & West Monroe Street")
+    static let capitol = Self(id: "capitol-road", name: "Capitol district", address: "Congress Ave & E 11th St")
+    static let lamar = Self(id: "lamar-road", name: "Lamar Boulevard", address: "W 6th St & N Lamar Blvd")
+    static let eastSixth = Self(id: "sixth-road", name: "East Sixth Street", address: "East 6th Street & Comal Street")
+    static let chicon = Self(id: "chicon-road", name: "East Austin", address: "Chicon Street & East Cesar Chavez Street")
+    static let holly = Self(id: "holly-road", name: "Holly neighborhood", address: "Holly Street & Chicon Street")
+    static let coffee = Self(id: "coffee-stop", name: "Mozart’s Coffee Roasters", address: "3825 Lake Austin Blvd", note: "Check opening hours before stopping.", isStop: true)
+    static let mountBonnell = Self(id: "view-stop", name: "Mount Bonnell", address: "3800 Mount Bonnell Rd", note: "The overlook is reached on foot. Check access before stopping.", isStop: true)
+    static let butlerPark = Self(id: "walk-stop", name: "Butler Park", address: "1000 Barton Springs Rd", note: "Time for a walk is extra. Check park access before stopping.", isStop: true)
 }
 
 struct RouteWaypoint: Identifiable {
@@ -64,6 +108,7 @@ struct RouteWaypoint: Identifiable {
     let detail: String
     let coordinate: CLLocationCoordinate2D
     var note: String? = nil
+    var isStop = false
 }
 
 struct RouteLeg: Identifiable {
@@ -79,6 +124,7 @@ struct ScenicRoute: Identifiable {
     /// Includes both the starting point and a final return to exactly that point.
     let waypoints: [RouteWaypoint]
     let legs: [RouteLeg]
+    var options = RideOptions()
 
     var highlights: [RouteWaypoint] { Array(waypoints.dropFirst().dropLast()) }
     var distance: CLLocationDistance { legs.reduce(0) { $0 + $1.distance } }

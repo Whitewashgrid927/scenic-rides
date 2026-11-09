@@ -16,6 +16,7 @@ final class HomeScreenTests: XCTestCase {
         app.buttons["findRide"].tap()
         XCTAssertTrue(app.staticTexts["routeTarget"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["routeTarget"].label.contains("90 min target"))
+        XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["routeReturn"].label.contains("Austin, TX"))
         app.buttons["closeRoutePreview"].tap()
         XCTAssertTrue(picker.buttons["90 min"].isSelected)
@@ -53,7 +54,7 @@ final class HomeScreenTests: XCTestCase {
         XCTAssertLessThanOrEqual(action.frame.maxY, app.frame.maxY - 40)
         saveScreenshot(app, name: "Large text home screen")
         action.tap()
-        XCTAssertTrue(app.navigationBars["Your round trip"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Choose your loop"].waitForExistence(timeout: 5))
     }
 
     @MainActor

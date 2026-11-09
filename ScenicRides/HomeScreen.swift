@@ -7,6 +7,9 @@ struct HomeScreen: View {
     @State private var location = LocationService()
     @State private var startingPlace = StartingPlace.austin
     @State private var duration: RideDuration = .sixty
+    @State private var style: RideStyle = .water
+    @State private var options = RideOptions()
+    @State private var isChoosingOptions = false
     @State private var camera: MapCameraPosition = .region(StartingPlace.austinMapRegion)
     @State private var isChoosingLocation = false
 
@@ -40,6 +43,9 @@ struct HomeScreen: View {
             }
         }
         .background(Color(uiColor: .systemBackground))
+        .sheet(isPresented: $isChoosingOptions) {
+            RideOptionsSheet(options: options) { options = $0 }
+        }
         .sheet(isPresented: $isChoosingLocation) {
             StartingPlacePicker(location: location, selection: startingPlace) { place in
                 startingPlace = place
@@ -59,7 +65,7 @@ struct HomeScreen: View {
 
     private func ridePanel(availableHeight: CGFloat) -> some View {
         Group {
-            if dynamicTypeSize.isAccessibilitySize {
+            if dynamicTypeSize >= .xxLarge || availableHeight < 700 {
                 ScrollView { rideControls }
                     .scrollBounceBehavior(.basedOnSize)
                     .frame(height: availableHeight * 0.76)
@@ -100,9 +106,9 @@ struct HomeScreen: View {
     }
 
     private var rideControls: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            Text("Let’s take\nthe scenic way.")
-                .font(.largeTitle.bold())
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Take the scenic way.")
+                .font(.title.bold())
                 .tracking(-0.7)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
@@ -121,13 +127,36 @@ struct HomeScreen: View {
                 .accessibilityIdentifier("rideLength")
             }
 
-            Label("Returns to your starting point", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Your kind of ride")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
+                    ForEach(RideStyle.allCases) { choice in
+                        RideChoiceButton(title: choice.name, symbol: choice.symbol, selected: style == choice) { style = choice }
+                            .accessibilityIdentifier("rideStyle-\(choice.rawValue)")
+                    }
+                }
+            }
+
+            Button { isChoosingOptions = true } label: {
+                HStack {
+                    Text(options.summary)
+                        .foregroundStyle(.primary)
+                        .accessibilityIdentifier("optionsSummary")
+                    Spacer(minLength: 8)
+                    Label("More options", systemImage: "slider.horizontal.3")
+                        .foregroundStyle(.secondary)
+                }
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 34)
+                .padding(.horizontal, 4)
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.roundedRectangle(radius: 16))
+            .accessibilityIdentifier("rideOptions")
 
             Button {
-                onFindRide(RideRequest(startingPlace: startingPlace, duration: duration))
+                onFindRide(RideRequest(startingPlace: startingPlace, duration: duration, style: style, options: options))
             } label: {
                 HStack(spacing: 10) {
                     Text("Find a scenic ride")
@@ -142,10 +171,15 @@ struct HomeScreen: View {
             .buttonBorderShape(.capsule)
             .tint(.blue)
             .accessibilityIdentifier("findRide")
+
+            Text("Returns to your starting point")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 28)
-        .padding(.bottom, 34)
+        .padding(.top, 24)
+        .padding(.bottom, 24)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -4,7 +4,7 @@ import Observation
 @MainActor
 protocol RouteMapServing {
     func resolve(_ anchor: RouteAnchor) async throws -> RouteWaypoint
-    func directions(from: RouteWaypoint, to: RouteWaypoint, departure: Date) async throws -> RouteLeg
+    func directions(from: RouteWaypoint, to: RouteWaypoint, departure: Date, preferences: RoadPreferences) async throws -> RouteLeg
 }
 
 @MainActor
@@ -26,7 +26,7 @@ final class MapKitRoutePlanner: RoutePlanning {
         }
         let start = request.startingPlace
         var waypoints = [RouteWaypoint(id: "start", name: start.name, detail: start.detail, coordinate: start.coordinate)]
-        for anchor in loop.anchors {
+        for anchor in loop.anchors(options: request.options) {
             try Task.checkCancellation()
             waypoints.append(try await maps.resolve(anchor))
         }
@@ -45,7 +45,7 @@ final class MapKitRoutePlanner: RoutePlanning {
                 let coordinates = [source.coordinate, destination.coordinate]
                 leg = RouteLeg(polyline: MKPolyline(coordinates: coordinates, count: 2), distance: 0, expectedTravelTime: 0)
             } else {
-                leg = try await maps.directions(from: source, to: destination, departure: departure)
+                leg = try await maps.directions(from: source, to: destination, departure: departure, preferences: request.options.roads)
             }
             try Task.checkCancellation()
             guard leg.distance.isFinite, leg.distance >= 0,
@@ -55,7 +55,7 @@ final class MapKitRoutePlanner: RoutePlanning {
             departure = departure.addingTimeInterval(leg.expectedTravelTime)
         }
         // Publish only a complete round trip; a failed return leg must not become a partial route.
-        return ScenicRoute(loop: loop, waypoints: waypoints, legs: legs)
+        return ScenicRoute(loop: loop, waypoints: waypoints, legs: legs, options: request.options)
     }
 }
 
@@ -68,7 +68,7 @@ final class AppleRouteMapService: RouteMapServing {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = anchor.searchQuery
         request.region = StartingPlace.austinMapRegion
-        request.resultTypes = [.address, .pointOfInterest]
+        request.resultTypes = anchor.isStop ? [.address, .pointOfInterest] : .address
         let search = MKLocalSearch(request: request)
         let cancellation = MapRequestCancellation { search.cancel() }
         let response = try await withTaskCancellationHandler {
@@ -86,20 +86,27 @@ final class AppleRouteMapService: RouteMapServing {
             name: anchor.name,
             detail: item.addressRepresentations?.fullAddress(includingRegion: false, singleLine: true) ?? anchor.address,
             coordinate: item.location.coordinate,
-            note: anchor.note
+            note: anchor.note,
+            isStop: anchor.isStop
         )
         resolvedPlaces[anchor.id] = waypoint
         return waypoint
     }
 
-    func directions(from source: RouteWaypoint, to destination: RouteWaypoint, departure: Date) async throws -> RouteLeg {
+    static func directionsRequest(from source: RouteWaypoint, to destination: RouteWaypoint, departure: Date, preferences: RoadPreferences) -> MKDirections.Request {
         let request = MKDirections.Request()
         request.source = mapItem(source)
         request.destination = mapItem(destination)
         request.transportType = .automobile
         request.requestsAlternateRoutes = false
-        request.tollPreference = .avoid
+        request.tollPreference = preferences.avoidTolls ? .avoid : .any
+        request.highwayPreference = preferences.avoidHighways ? .avoid : .any
         request.departureDate = departure
+        return request
+    }
+
+    func directions(from source: RouteWaypoint, to destination: RouteWaypoint, departure: Date, preferences: RoadPreferences) async throws -> RouteLeg {
+        let request = Self.directionsRequest(from: source, to: destination, departure: departure, preferences: preferences)
         let directions = MKDirections(request: request)
         let cancellation = MapRequestCancellation { directions.cancel() }
         let response = try await withTaskCancellationHandler {
@@ -113,7 +120,7 @@ final class AppleRouteMapService: RouteMapServing {
         return RouteLeg(polyline: route.polyline, distance: route.distance, expectedTravelTime: route.expectedTravelTime)
     }
 
-    private func mapItem(_ point: RouteWaypoint) -> MKMapItem {
+    private static func mapItem(_ point: RouteWaypoint) -> MKMapItem {
         let item = MKMapItem(location: CLLocation(latitude: point.coordinate.latitude, longitude: point.coordinate.longitude), address: nil)
         item.name = point.name
         return item
@@ -137,29 +144,46 @@ final class RoutePreviewModel {
         case failed(RoutePlanningError)
     }
 
-    private(set) var state: State = .loading
+    private(set) var states: [AustinLoop: State] = [:]
     private let planner: any RoutePlanning
     private var generation = UUID()
+    private var requestID: UUID?
 
     init(planner: any RoutePlanning = MapKitRoutePlanner()) { self.planner = planner }
 
-    var route: ScenicRoute? {
-        if case let .ready(route) = state { return route }
+    func state(for loop: AustinLoop) -> State { states[loop] ?? .loading }
+
+    func route(for loop: AustinLoop) -> ScenicRoute? {
+        if case let .ready(route) = state(for: loop) { return route }
         return nil
     }
 
-    func load(_ request: RideRequest, loop: AustinLoop) async {
+    func loadChoices(_ request: RideRequest, loops: [AustinLoop], prioritizing selected: AustinLoop) async {
         let token = UUID()
         generation = token
-        state = .loading
-        do {
-            let route = try await planner.plan(request, loop: loop)
-            try Task.checkCancellation()
-            guard generation == token else { return }
-            state = .ready(route)
-        } catch {
+        if requestID != request.id {
+            states = [:]
+            requestID = request.id
+        }
+        let ordered = [selected] + loops.filter { $0 != selected }
+        // Load sequentially and keep successful choices when retrying a failed card.
+        for loop in ordered where route(for: loop) == nil {
             guard !Task.isCancelled, generation == token else { return }
-            state = .failed(error as? RoutePlanningError ?? .unavailable)
+            states[loop] = .loading
+            do {
+                let route = try await planner.plan(request, loop: loop)
+                try Task.checkCancellation()
+                guard generation == token else { return }
+                states[loop] = .ready(route)
+            } catch {
+                guard !Task.isCancelled, generation == token else { return }
+                let failure = error as? RoutePlanningError ?? .unavailable
+                states[loop] = .failed(failure)
+                if failure == .outsideAustin {
+                    for choice in loops { states[choice] = .failed(failure) }
+                    return
+                }
+            }
         }
     }
 }

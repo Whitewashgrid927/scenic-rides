@@ -1,97 +1,95 @@
 # Scenic Rides
 
-A native iPhone app for choosing and previewing a scenic Austin round trip. Built with SwiftUI, MapKit, Core Location, and SF Symbols. Minimum deployment target: **iOS 26.0**. No third-party packages or map API keys are required for this native MapKit implementation.
+A native iPhone app for choosing and previewing a scenic Austin round trip. Built with SwiftUI, MapKit, Core Location, and SF Symbols. Minimum deployment target: **iOS 26.0**. No third-party packages or map API keys are required.
 
-<img src="docs/home-screen.png" alt="Scenic Rides running in the iPhone simulator, with a dark Austin map, ride-length picker, and native Liquid Glass controls" width="360">
+<p>
+  <img src="docs/home-screen.png" alt="Dark Austin home screen with four ride styles and native glass controls" width="250">
+  <img src="docs/route-preview.png" alt="Live MapKit round trip with swipeable route cards" width="250">
+  <img src="docs/ride-options.png" alt="Native options sheet with optional stops and road preferences" width="250">
+</p>
 
 ## Open and run
 
 1. Open `ScenicRides.xcodeproj` in Xcode 26 or later.
 2. Select the **ScenicRides** scheme and an iPhone simulator running iOS 26 or later.
-3. Run. To use a physical device, choose your development team in Signing & Capabilities and change the bundle identifier if needed.
+3. Run. For a physical device, choose your development team in Signing & Capabilities and change the bundle identifier if needed.
 
-The project includes a shared scheme and has no package-resolution step. The source and project files are the deliverable; build products are intentionally excluded.
+The project includes a shared scheme and has no package-resolution step. Build products are intentionally excluded.
 
-## Home screen
+## Choose a ride
 
-- Live Apple map, starting on Austin with dark appearance, muted map features, and business pins hidden.
-- Native Liquid Glass location button and prominent primary action.
-- Native segmented picker for 30, 60, or 90 minutes; 60 minutes is initially selected.
-- All rides return to their starting point. There is no one-way toggle.
-- A starting-point sheet with native place/address search and **Use my location**.
-- Location permission is requested only after selecting **Use my location**. Denial leaves place search and the Austin selection available.
-- The device-location dot appears only after a real location has been obtained. The Austin default is a city-level selection, not a claim about the device's location.
-- System typography, VoiceOver labels, Reduce Motion handling, and a scrolling control panel when large text needs more room.
+The home screen combines a live dark Apple map, a starting-point button, a 30/60/90-minute duration target, and four ride styles:
 
-Apple renders the actual map and Liquid Glass.
+| Style | Route choices |
+| --- | --- |
+| Water views | Lake & skyline; Riverside loop |
+| Hills & curves | Hills & river; Westlake wander |
+| City lights | City & skyline; East Austin loop |
+| Surprise me | One choice from each of the three styles, shuffled once per preview |
 
-## Austin route preview
+All rides return to the selected starting point. City lights selects urban scenery; it does not schedule a night ride. Starting-point search and **Use my location** remain available. Location permission is requested only after choosing that action; denial leaves manual search available. Austin is a generic city-level default, not a claim about the device's location.
 
-<img src="docs/route-preview.png" alt="Live MapKit round trip through Red Bud Isle, Mount Bonnell, and Bull Creek, with estimated driving time and native glass controls" width="360">
+**More options** opens a native sheet:
 
-**Find a scenic ride** opens a full-screen map with a road-following round trip, numbered highlights, estimated driving time and distance, and a compact bottom panel. **View stops** opens the ordered itinerary, including the starting point and return. **Try another** cycles through the three curated loops, and the map toolbar can fit the whole route again after panning.
+- **Just drive** uses public roads and intersections to shape a drive without scheduling a stop.
+- **Include a stop** adds one public destination: Coffee at Mozart’s Coffee Roasters, A view at Mount Bonnell, or A short walk at Butler Park.
+- **Avoid highways** and **Avoid tolls** are passed to every MapKit driving request, including the return leg. Defaults are highways allowed and tolls avoided. These are routing preferences, applied where possible.
+- **Apply** saves the draft choices for this session. Cancel or dismissing the sheet discards unapplied edits. Apply stays above the safe area when the form scrolls.
 
-| Initial duration target | Suggested loop | Highlights |
-| --- | --- | --- |
-| 30 minutes | Parks & skyline | Auditorium Shores, Zilker Metropolitan Park, Deep Eddy Pool |
-| 60 minutes | Hills & river | Red Bud Isle, Mount Bonnell, Bull Creek District Park |
-| 90 minutes | Around Lake Austin | Mount Bonnell, Emma Long Metropolitan Park, Red Bud Isle |
+Native Liquid Glass styles are used for choice cards and buttons. Content panels use native material, with system typography and dark appearance. Large text switches the choice grids to one column and makes the map panels scroll. Selected choices have accessibility traits, and camera/selection animation respects Reduce Motion.
 
-The selected duration is a **target**, not a promised route length. MapKit resolves the public places and calculates each driving leg, including the return to the selected starting point. The preview sums the actual distance and travel-time estimates; stops add extra time. Later legs use the preceding legs' estimated arrival times. Route alternatives can be shorter or longer than the target.
+## Compare Austin loops
 
-Starting points are supported within 40 km of central Austin. A place outside that area gets a clear message and a way back. Loading, retry, cancellation, and large-text layouts are supported. A failed leg never leaves a partial route presented as a complete round trip.
+**Find a scenic ride** opens a full-screen MapKit preview. Swipe the cards, tap a card, or use the page indicators to select an alternative. The selected card, road polyline, numbered waypoints, and **View route** itinerary stay in sync. The map toolbar fits the whole route after panning.
 
-The named highlights anchor each route; MapKit chooses the roads between them. This is not a scenic-road optimizer, and some routes may retrace roads. The stops sheet identifies the walk to Mount Bonnell's overlook and Emma Long's day-pass requirement. Access and opening hours may change.
+MapKit resolves public roads, intersections, and destinations and calculates every driving leg, including the return to the selected starting coordinate. Cards show the sum of actual distance and driving-time estimates. Alternatives load sequentially and successful routes stay cached while viewing this preview. A failed choice can be retried without losing successful alternatives. Cancelling or leaving the preview prevents late results from replacing the current state.
 
-## Sample data and location
+The itinerary distinguishes **Drive through** waypoints from the optional stop and lists both Start and Return. Stop time is extra. Opening hours, parking, and access are not verified by the app; Mount Bonnell’s overlook requires walking.
 
-Austin is a city-level demo selection. Screenshots use that sample starting point, not a saved device location. Route anchors and search tests use public attractions.
+The duration picker remains a **target**, not a promised length or an optimized time budget. The catalog contains two fixed loops per style: 30 and 60 minutes use the same initial order, while 90 minutes reverses it. Actual routes can be shorter or longer than the target. MapKit chooses connecting roads, which may retrace portions of the drive. This is not a scenic-road or duration optimizer.
 
-The app keeps ride preferences and routes in memory. Map display, place searches, and directions use Apple's MapKit services; there is no application backend or analytics integration. Personal addresses, location histories, credentials, signing files, and local build/test artifacts should stay out of this repository.
+Starting points are supported within 40 km of central Austin. An unsupported start gets a clear message and a way back. No partial route is presented as a complete round trip if any leg fails.
 
-## Scope of the primary action
+## Data and scope
 
-`HomeScreen(onFindRide:)` passes a typed `RideRequest` containing the selected starting place and duration. `ScenicRidesApp` presents `RoutePreviewScreen`, which obtains a complete route through `MapKitRoutePlanner`.
+Preferences and routes stay in memory. Map display, place searches, and directions use Apple's MapKit services; there is no application backend or analytics integration. Screenshots use the generic Austin starting point and public destinations. Personal addresses, location histories, credentials, signing files, and local build/test artifacts stay out of this repository.
 
-Vehicle connectivity, booking, fares, in-ride guidance, and automatic duration optimization are **not implemented**. Viewing stops does not start navigation or book a vehicle.
+`HomeScreen(onFindRide:)` passes a typed `RideRequest` with the start, duration, style, and options. `ScenicRidesApp` presents `RoutePreviewScreen`, which obtains complete routes through `MapKitRoutePlanner`.
+
+Vehicle connectivity, booking, fares, in-ride guidance, and automatic duration optimization are **not implemented**. Viewing a route does not start navigation or book a vehicle.
 
 ## Structure
 
-- `HomeScreen.swift`: map composition and home controls.
-- `RidePreferences.swift`: duration, starting-place, and request value types.
-- `StartingPlacePicker.swift`: native search, selection, and location action.
-- `LocationService.swift`: foreground-only location request and permission/error state.
-- `AustinRoutes.swift`: public route anchors, route value types, and duration preferences.
-- `RoutePlanner.swift`: MapKit place resolution, driving directions, cancellation, and preview state.
-- `RoutePreviewScreen.swift`: route map, summary panel, loading/retry states, and stops sheet.
-- `ScenicRidesTests/RoutePlannerTests.swift`: return-leg integrity, totals, coincident stops, unsupported starts, retry, and stale/cancelled responses.
-- `ScenicRidesUITests`: home-screen regressions, preview interactions, large text, and live Apple service checks.
+- `HomeScreen.swift`: map and ride controls.
+- `RidePreferences.swift`: request, style, duration, stop, and road-preference types.
+- `RideOptionsSheet.swift`: draft options, Apply/Cancel, and shared glass choice buttons.
+- `StartingPlacePicker.swift` and `LocationService.swift`: native search and foreground location requests.
+- `AustinRoutes.swift`: six public route definitions and optional stop destinations.
+- `RoutePlanner.swift`: MapKit resolution/directions, cancellation, and per-choice preview state.
+- `RoutePreviewScreen.swift`: route carousel, synchronized map, loading/retry states, and itinerary.
+- `ScenicRidesTests`: round-trip integrity, preferences, alternatives, and cancellation coverage.
+- `ScenicRidesUITests`: home, options, swiping, accessibility text sizes, and live Apple service checks.
 
 ## Validation
 
-Run the unit and UI tests with **Product → Test** or:
+Run **Product → Test** or:
 
 ```sh
 xcodebuild -project ScenicRides.xcodeproj -scheme ScenicRides \
   -destination 'platform=iOS Simulator,name=YOUR_SIMULATOR' test
 ```
 
-If your selected developer directory points to Command Line Tools, select the installed Xcode in its Settings → Locations or set `DEVELOPER_DIR` for the command. This project does not change the machine's selected Xcode.
+If the developer directory points to Command Line Tools, select the installed Xcode in Settings → Locations or set `DEVELOPER_DIR` for the command. This project does not change the machine's selected Xcode.
 
-Build and simulator results for this delivery are recorded in [VALIDATION.md](VALIDATION.md).
+Build and simulator results are recorded in [VALIDATION.md](VALIDATION.md). The live place-search test and `RoutePreviewTests/testLiveStyleChoicesAndCoffeeStop` require connectivity to Apple. Other preview UI tests use a debug-only injected planner for deterministic loading, success, and failure/retry states. Release builds exclude that planner. The published route screenshot comes from live MapKit directions. Test logs and raw result bundles remain local.
 
-The live place-search test and `RoutePreviewTests/testLiveAustinLoops` require connectivity to Apple's services. Other preview UI tests use a debug-only injected planner for deterministic success, failure/retry, and cancellation states. Release builds exclude that planner. The included route screenshot is captured from live MapKit directions, not a fixture. Test logs and raw result bundles remain local.
+## References
 
-## Apple references
-
-- [MapKit for SwiftUI](https://developer.apple.com/documentation/mapkit/mapkit-for-swiftui)
-- [Map styles](https://developer.apple.com/documentation/mapkit/mapstyle)
-- [MapKit directions](https://developer.apple.com/documentation/mapkit/mkdirections)
-- [Map polylines](https://developer.apple.com/documentation/mapkit/mappolyline)
-- [Liquid Glass materials](https://developer.apple.com/design/human-interface-guidelines/materials)
-- [Native prominent glass buttons](https://developer.apple.com/documentation/swiftui/glassprominentbuttonstyle)
+- [MapKit for SwiftUI](https://developer.apple.com/documentation/mapkit/mapkit-for-swiftui) and [directions](https://developer.apple.com/documentation/mapkit/mkdirections)
+- [MapKit highway preferences](https://developer.apple.com/documentation/mapkit/mkdirections/request/highwaypreference) and [toll preferences](https://developer.apple.com/documentation/mapkit/mkdirections/request/tollpreference)
+- [Native view-aligned scrolling](https://developer.apple.com/documentation/swiftui/scrolltargetbehavior/viewaligned)
+- [Liquid Glass materials](https://developer.apple.com/design/human-interface-guidelines/materials) and [prominent glass buttons](https://developer.apple.com/documentation/swiftui/glassprominentbuttonstyle)
 - [Location authorization](https://developer.apple.com/documentation/corelocation/requesting-authorization-to-use-location-services)
+- [City of Austin park directory](https://www.austintexas.gov/parks/locations/park-directory), [Mozart’s FAQ](https://mozartscoffee.com/pages/frequently-asked-questions), and [Mount Bonnell guide](https://www.austintexas.org/austin-insider-blog/blog/post/mount-bonnell-for-beginners/)
 
-## Austin references
-
-Public place names and addresses are based on the [City of Austin park directory](https://www.austintexas.gov/parks/locations/park-directory), [Deep Eddy Pool](https://www.austintexas.gov/parks/locations/deep-eddy-pool), and [Emma Long Metropolitan Park](https://www.austintexas.gov/parks/emma-long-metropolitan-park). The [Mount Bonnell guide](https://www.austintexas.org/austin-insider-blog/blog/post/mount-bonnell-for-beginners/) describes the walk to the overlook. MapKit resolves their current map locations at runtime.
+MapKit resolves the public map locations at runtime. Place access and service estimates can change.

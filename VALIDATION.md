@@ -1,65 +1,75 @@
 # Validation
 
-Validated November 8, 2026.
+Validated November 8–9, 2026.
 
-## Environment
+## Environment and builds
 
-- Xcode 27.2, iOS Simulator SDK 27.2.
-- iPhone 17 Pro simulator, iOS 27.0, running in the background.
-- Deployment target: **iOS 26.0**; Swift 6 with complete strict-concurrency checking.
-- Debug app and both test targets built successfully. Release simulator build also passed.
-- No Swift compiler warnings. Xcode emits its routine App Intents metadata-extraction warning because the app has no App Intents dependency.
+- Xcode 27.2, iOS Simulator SDK 27.2, iPhone 17 Pro simulator running iOS 27.0.
+- Deployment target **iOS 26.0**; Swift 6 with complete strict-concurrency checking.
+- Debug app, both test targets, and Release simulator build pass.
+- The Release bundle declares minimum OS 26.0, includes `AustinCatalog.json`, links Foundation Models, and excludes the fixture planner and `SCENIC_ROUTE_TEST_SCENARIO` flag.
+- No Swift compiler warnings. The routine App Intents metadata-extraction warning appears because the app has no App Intents dependency.
 - Project property-list syntax and `git diff --check` pass.
 
-The available runtime is iOS 27.0. iOS 26 API availability is checked by compilation with a 26.0 deployment target; a separate iOS 26 runtime and a physical device have not been tested.
+The available simulator runtime is iOS 27.0. Compilation checks API availability against the 26.0 deployment target; an iOS 26 runtime and a physical iPhone have not been tested.
 
 ## Automated coverage
 
-**13 unit tests and 14 UI tests pass across the main run and focused reruns.** Focused reruns verified the final loading/no-fit states and corrected test queries for native picker items and combined `LabeledContent` accessibility labels. No test failures remain unresolved.
+**26 unit tests and 18 UI tests pass.** The final unit/live-service run and the complete remaining UI run have no unresolved test failures.
 
 Unit coverage includes:
 
-- All 15 nonempty scenery combinations across 30-, 60-, and 90-minute budgets, with and without a stop. Shortlists cover every selected category, remain deterministic, include a compact fallback, and contain at most five distinct candidates.
-- All 12 loops return to the selected coordinate and sum every driving leg's distance and time.
-- All 12 loops with each of the three stop kinds include one timed stop. Stop time contributes to the total and advances the return-leg departure estimate.
-- Budget filtering uses exact seconds: a route at the boundary qualifies, while one exceeding it by a fraction of a second does not. Missing scenery disqualifies a route. Matches are ranked by closest total under budget.
-- Increasing a stop's duration can remove a previously fitting route without dropping the stop or changing the requested budget.
-- No-fit states use actual completed estimates. Empty scenery, a stop consuming the whole budget, and unsupported starts are rejected before network work.
-- Actual `MKDirections.Request` objects receive the selected highway/toll preferences and departure time.
-- Retry preserves completed candidates, including over-budget results; a new request clears cached choices.
-- Failed return legs never publish partial trips. Coincident waypoints skip zero-length requests. Cancelled and stale completions cannot restore old routes or budgets.
+- The bundled 24-route, 15-stop catalog, stable and unique IDs, invalid catalog data, all 15 nonempty scenery combinations, deterministic candidate order, and a compact first-batch option.
+- All 24 loops return to the selected coordinate. Stops match the requested kind and geographic limits, contribute their actual scenery, and are inserted along the route. A route without an eligible nearby stop is rejected.
+- Every driving leg and the planned stop count toward the budget. The stop advances later departure estimates. Exact-second boundaries, missing scenery, over-budget AI suggestions, and increasing stop durations cannot bypass eligibility checks.
+- MapKit receives the selected highway/toll preferences. Failed return legs cannot publish partial trips; coincident points avoid zero-length network requests.
+- Five-candidate batches, up to three appended matches, cached matches, exhaustion, stable existing cards, later-batch failures, retries, and finding a fit after an initially empty batch.
+- Cancellation during initial or additional loading and stale requests cannot replace current routes. A cancelled More batch can resume.
+- Real model integration boundaries with injected generation results: valid reordering, unknown/duplicate/missing/empty IDs, all availability reasons, generation errors, timeout, and cancellation. Successful rankings are reused only within an unchanged request.
+- The AI prompt excludes the starting name, address, and exact starting coordinate.
 
 UI coverage includes:
 
-- Home defaults, budget selection, handoff, and preserving preferences when returning.
-- Multiple scenery selections, visible selected state, and the empty-selection guard.
-- Starting-point selection/cancellation, live public-place search, and location-permission denial recovery.
-- Swiping and pagination select the matching map and itinerary, including the final return.
-- Coffee selection, stop-duration changes, highway toggle persistence, Apply, Cancel, and the total-time breakdown.
-- No-fit and impossible-stop states never present over-budget recommendations.
-- Failed alternatives can retry without losing the selected successful route. Loading can be dismissed.
+- Home defaults, multi-select scenery, the empty-selection guard, and preferences preserved on return.
+- Starting-point selection and cancellation, live public-place search, and location-permission denial recovery.
+- Swiping and previous/next controls synchronize the map and itinerary.
+- Stop kinds, duration, road options, Apply/Cancel, and the total-time breakdown.
+- More routes preserves selection, adds cards, reaches exhaustion, survives a partial failure, and can be dismissed while loading.
+- AI and fallback attribution are distinguished on cards and in the itinerary. The deterministic attribution test uses a debug fixture; separate live checks below exercise actual inference.
+- Impossible-stop and no-fit states never present over-budget recommendations.
 - Home, options, and route-preview actions remain reachable at the largest accessibility text size.
-- Live MapKit requests for a 30-minute drive, a 60-minute Water + Hills outing with a 15-minute coffee stop, and a 90-minute outing selecting all four scenery categories with a 20-minute walk. Displayed route totals fit the selected budgets, and the stop itineraries return to the selected city starting point.
 
-The observed live best-fit totals were approximately 24, 54, and 88 minutes respectively. They are observations from this run, not fixed route durations. Some alternatives in the 90-minute search failed to load; the completed matching route remained available with a retry action.
+## Live Apple services and local model
 
-The live search and directions checks require Apple's services. Other preview UI tests use a debug-only fixture planner. The Release binary excludes the fixture planner and its environment flag. The published route screenshot uses live MapKit directions. This delivery's live stop checks cover coffee and walking; view stops have unit coverage.
+All 49 public road-anchor addresses and 15 stop addresses were checked with native MapKit search. Ambiguous road queries were corrected before bundling the catalog. Venue and park sources are linked in [the catalog guide](docs/AUSTIN-CATALOG.md). This verifies address resolution, not current access or every possible road segment.
 
-## Visual verification
+The live simulator UI test used the production planner, with no fixture environment flag, for:
 
-- Inspected native captures of multiple scenery selection, the stop-time options sheet, all three live budget results, a stop itinerary, and the largest-text options and preview layouts.
-- Confirmed selected glass controls, card peeking and pagination, road polylines, total-time estimates, driving/stop breakdowns, Apple Maps attribution, and the itinerary action.
-- Checked public address-search results for the new Bull Creek area and City Park Road anchors. Lakewood Drive is represented as a road waypoint; City Park Road resolves at Pearce Road.
-- Choice grids become one column at accessibility sizes; panels and the options form scroll. Apply stays above the sheet's safe area.
-- Toolbar controls retain the native system appearance. Cards and buttons use `.glass` and `.glassProminent`; content panels use `.regularMaterial`.
-- Updated [home](docs/home-screen.png), [live route preview](docs/route-preview.png), and [options sheet](docs/ride-options.png) screenshots. Image metadata is stripped with pixel content preserved.
+| Request | Observed selected total | Result |
+| --- | --- | --- |
+| 30 minutes, Water, Just drive | About 24 minutes | Mueller lakeside; More routes increased the available cards from 3 to 6 and retained the selection. |
+| 60 minutes, Water + Hills, 15-minute coffee stop | About 49 minutes | River, hills & skyline with Mozart’s Coffee Roasters; the card reported on-device AI selection. |
+| 90 minutes, all four scenery choices, 20-minute walk | About 86 minutes | A little farther west with Pease Park; the card reported on-device AI selection. |
 
-## Scope and privacy
+All displayed totals met the selected budget. Stop itineraries included the planned duration and return to the generic Austin starting point. Some alternatives in the 60-minute search failed to load; the successful matching route remained usable with retry and More routes available. Estimates are observations from this run, not fixed catalog durations.
 
-Routes use 12 curated public-road loops and three optional public destinations. Every recommendation covers the selected scenery tags and fits the total budget using its MapKit driving estimates plus planned stop time. The planner checks at most five candidates and shows up to three matches; it does not exhaustively search Austin's roads or promise to use every minute. A matching route outside the shortlist may exist.
+A separate native macOS 27.3 harness compiled the actual production catalog, planner, and stop-ranker sources and used `SystemLanguageModel.default` plus live MapKit. The system reported the model available. Both runs used 90-minute budgets and 20-minute coffee stops:
 
-Scenery tags describe portions of the outing, including the chosen stop. MapKit chooses connecting roads, which can retrace portions of the trip. Road avoidance is a preference. Traffic, parking, access, and time actually spent at a stop can change the total. Opening-hours checks, vehicle connectivity, booking, in-ride guidance, and language-model integration are not included.
+- Hyde Park ramble: the real model ranked Epoch Coffee — North Loop and Cherrywood Coffeehouse, selecting Epoch North Loop. MapKit estimated about 48 minutes including the stop; the complete return trip fit.
+- Barton Hills meander: the real model accepted Radio Coffee & Beer from its eligible shortlist. MapKit estimated about 51 minutes including the stop; the complete return trip fit.
 
-Live device GPS acquisition remains untested. Map tiles, directions, estimates, and Liquid Glass appearance can vary with connectivity, OS version, traffic, and accessibility settings.
+Both native runs asserted actual `.onDeviceAI` attribution and complete round-trip eligibility. These were real Foundation Models calls, not mocked model results. Physical-iPhone inference remains untested.
 
-Personal addresses, identity metadata, credentials, signing files, local paths, logs, and raw test results are excluded from the repository. Only the approved GitHub handle and noreply commit attribution are retained. Public screenshots use the generic Austin starting point, not a device location.
+## Visual checks
+
+Inspected native captures of the options sheet, More routes, all three live budget results, a live stop itinerary, and the largest-text preview. Confirmed native glass controls, readable cards, selected-route outlines, pagination, road polylines, Apple Maps attribution, stop names, AI attribution, and reachable actions.
+
+The [route screenshot](docs/route-preview.png) shows live MapKit directions after More routes. The [AI stop screenshot](docs/ai-stop-preview.png) comes from the live 90-minute UI run. The [options screenshot](docs/ride-options.png) shows the new stop-selection explanation. Screenshots use generic Austin and public destinations, with metadata stripped and pixel content preserved.
+
+## Practical limits and privacy
+
+The model ranks at most four eligible catalog stops. It does not generate road geometry, travel estimates, new route templates, or arbitrary destinations. Time eligibility always uses MapKit plus planned stop time. Scenery and geographic detours remain curated/approximate inputs. Opening hours, parking, closures, vehicle connectivity, booking, and in-ride guidance are not implemented. Live device GPS acquisition remains untested.
+
+Model generation stays on-device. MapKit search and routing use Apple's network services. The app keeps preferences, routes, and rankings in memory and does not log AI prompts or responses. Starting addresses and exact start coordinates are excluded from the AI prompt.
+
+The repository's working files and reachable history were checked for personal identity, private starting addresses, private filesystem paths, credentials, and unapproved email attribution. Only the approved GitHub handle and noreply commit identity are retained. Local harnesses, logs, raw test results, signing files, and device identifiers remain outside the repository.

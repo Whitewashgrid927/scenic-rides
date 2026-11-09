@@ -40,7 +40,7 @@ struct RideOptionsSheet: View {
                         }
                         .accessibilityIdentifier("stopTime")
                     } footer: {
-                        Text("Included in your time budget, along with the drive back.")
+                        Text("On-device AI helps choose a nearby stop when available. Stop time and the drive back are included in your budget.")
                     }
                 }
                 Section {

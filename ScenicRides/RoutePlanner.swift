@@ -33,7 +33,7 @@ final class MapKitRoutePlanner: RoutePlanning {
         waypoints.append(RouteWaypoint(id: "return", name: start.name, detail: start.detail, coordinate: start.coordinate))
 
         var legs: [RouteLeg] = []
-        var departure = Date()
+        var departure = request.departure
         // Sequential requests avoid bursts and let each leg's ETA inform the next departure.
         for (source, destination) in zip(waypoints, waypoints.dropFirst()) {
             try Task.checkCancellation()
@@ -53,6 +53,9 @@ final class MapKitRoutePlanner: RoutePlanning {
                   leg.polyline.pointCount >= 2 else { throw RoutePlanningError.unavailable }
             legs.append(leg)
             departure = departure.addingTimeInterval(leg.expectedTravelTime)
+            if destination.isStop {
+                departure = departure.addingTimeInterval(request.options.stopTime)
+            }
         }
         // Publish only a complete round trip; a failed return leg must not become a partial route.
         return ScenicRoute(loop: loop, waypoints: waypoints, legs: legs, options: request.options)
@@ -139,37 +142,64 @@ private final class MapRequestCancellation {
 @Observable
 final class RoutePreviewModel {
     enum State {
-        case loading
         case ready(ScenicRoute)
-        case failed(RoutePlanningError)
+        case failed
     }
 
     private(set) var states: [AustinLoop: State] = [:]
+    private(set) var isLoading = true
+    private(set) var checkedCount = 0
+    private(set) var candidateCount = 0
+    private(set) var failure: RoutePlanningError?
     private let planner: any RoutePlanning
     private var generation = UUID()
-    private var requestID: UUID?
+    private var request: RideRequest?
 
     init(planner: any RoutePlanning = MapKitRoutePlanner()) { self.planner = planner }
 
-    func state(for loop: AustinLoop) -> State { states[loop] ?? .loading }
-
     func route(for loop: AustinLoop) -> ScenicRoute? {
-        if case let .ready(route) = state(for: loop) { return route }
+        if case let .ready(route) = states[loop] { return route }
         return nil
     }
 
-    func loadChoices(_ request: RideRequest, loops: [AustinLoop], prioritizing selected: AustinLoop) async {
+    private var completedRoutes: [ScenicRoute] {
+        states.values.compactMap { if case let .ready(route) = $0 { route } else { nil } }
+    }
+
+    var routes: [ScenicRoute] {
+        guard let request else { return [] }
+        // Fill the available time as closely as possible, without exceeding it.
+        return Array(completedRoutes.filter { $0.fits(request) }.sorted {
+            if $0.totalTime != $1.totalTime { return $0.totalTime > $1.totalTime }
+            if $0.distance != $1.distance { return $0.distance < $1.distance }
+            return $0.loop.rawValue < $1.loop.rawValue
+        }.prefix(3))
+    }
+
+    var shortestMinutes: Int? { completedRoutes.map(\.minutes).min() }
+    var hasFailures: Bool { states.values.contains { if case .failed = $0 { true } else { false } } }
+
+    func loadChoices(_ request: RideRequest, loops: [AustinLoop]? = nil) async {
         let token = UUID()
         generation = token
-        if requestID != request.id {
+        if self.request?.id != request.id {
             states = [:]
-            requestID = request.id
         }
-        let ordered = [selected] + loops.filter { $0 != selected }
-        // Load sequentially and keep successful choices when retrying a failed card.
-        for loop in ordered where route(for: loop) == nil {
+        self.request = request
+        failure = nil
+        isLoading = true
+        defer { if generation == token { isLoading = false } }
+        let choices = loops ?? AustinLoop.candidates(for: request)
+        candidateCount = choices.count
+        checkedCount = choices.filter { route(for: $0) != nil }.count
+        guard !request.scenery.isEmpty else { failure = .invalidPreferences; return }
+        guard request.options.stopTime < request.budget else { failure = .stopExceedsBudget; return }
+        guard AustinLoop.supports(request.startingPlace.coordinate) else { failure = .outsideAustin; return }
+
+        // Bound and sequence network work. Retry only failed choices, retaining
+        // complete routes (including over-budget results) for this request.
+        for loop in choices where route(for: loop) == nil {
             guard !Task.isCancelled, generation == token else { return }
-            states[loop] = .loading
             do {
                 let route = try await planner.plan(request, loop: loop)
                 try Task.checkCancellation()
@@ -177,13 +207,11 @@ final class RoutePreviewModel {
                 states[loop] = .ready(route)
             } catch {
                 guard !Task.isCancelled, generation == token else { return }
-                let failure = error as? RoutePlanningError ?? .unavailable
-                states[loop] = .failed(failure)
-                if failure == .outsideAustin {
-                    for choice in loops { states[choice] = .failed(failure) }
-                    return
-                }
+                states[loop] = .failed
             }
+            checkedCount += 1
         }
+        guard !Task.isCancelled, generation == token else { return }
+        if completedRoutes.isEmpty { failure = .unavailable }
     }
 }

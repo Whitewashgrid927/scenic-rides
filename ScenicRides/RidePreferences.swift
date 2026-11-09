@@ -46,29 +46,44 @@ struct RideRequest: Identifiable {
     let id = UUID()
     let startingPlace: StartingPlace
     let duration: RideDuration
-    var style: RideStyle = .water
-    var options = RideOptions()
+    let scenery: Set<Scenery>
+    let options: RideOptions
+    let departure: Date
+
+    init(startingPlace: StartingPlace, duration: RideDuration, scenery: Set<Scenery> = [.water], options: RideOptions = RideOptions(), departure: Date = Date()) {
+        self.startingPlace = startingPlace
+        self.duration = duration
+        self.scenery = scenery
+        self.options = options
+        self.departure = departure
+    }
+    var budget: TimeInterval { TimeInterval(duration.rawValue * 60) }
+    var sceneryLabel: String { Scenery.label(for: scenery) }
     // Every ride in this version returns to its starting point.
 }
 
-enum RideStyle: String, CaseIterable, Identifiable {
-    case water, hills, city, surprise
+enum Scenery: String, CaseIterable, Identifiable {
+    case water, hills, greenery, city
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .water: "Water views"
-        case .hills: "Hills & curves"
-        case .city: "City lights"
-        case .surprise: "Surprise me"
+        case .water: "Water"
+        case .hills: "Hills"
+        case .greenery: "Greenery"
+        case .city: "City"
         }
     }
     var symbol: String {
         switch self {
         case .water: "water.waves"
         case .hills: "mountain.2"
+        case .greenery: "leaf"
         case .city: "building.2"
-        case .surprise: "shuffle"
         }
+    }
+
+    static func label(for choices: Set<Self>) -> String {
+        allCases.filter { choices.contains($0) }.map(\.name).joined(separator: " · ")
     }
 }
 
@@ -97,6 +112,12 @@ enum RideStopKind: String, CaseIterable, Identifiable {
     }
 }
 
+enum StopDuration: Int, CaseIterable, Identifiable {
+    case ten = 10, fifteen = 15, twenty = 20, thirty = 30
+    var id: Int { rawValue }
+    var label: String { "\(rawValue) min" }
+}
+
 struct RoadPreferences: Equatable {
     var avoidHighways = false
     var avoidTolls = true
@@ -105,7 +126,10 @@ struct RoadPreferences: Equatable {
 struct RideOptions: Equatable {
     var pace: RidePace = .drive
     var stopKind: RideStopKind = .view
+    var stopDuration: StopDuration = .fifteen
     var roads = RoadPreferences()
 
-    var summary: String { pace == .drive ? pace.name : "Stop for \(stopKind.name.lowercased())" }
+    var stopMinutes: Int { pace == .stop ? stopDuration.rawValue : 0 }
+    var stopTime: TimeInterval { TimeInterval(stopMinutes * 60) }
+    var summary: String { pace == .drive ? pace.name : "\(stopKind.name) · \(stopMinutes) min" }
 }

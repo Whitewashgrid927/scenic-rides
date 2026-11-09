@@ -15,7 +15,7 @@ final class HomeScreenTests: XCTestCase {
         picker.buttons["90 min"].tap()
         app.buttons["findRide"].tap()
         XCTAssertTrue(app.staticTexts["routeTarget"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["routeTarget"].label.contains("90 min target"))
+        XCTAssertTrue(app.staticTexts["routeTarget"].label.contains("90 min budget"))
         XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["routeReturn"].label.contains("Austin, TX"))
         app.buttons["closeRoutePreview"].tap()

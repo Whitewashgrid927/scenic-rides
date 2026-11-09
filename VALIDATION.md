@@ -1,56 +1,65 @@
 # Validation
 
+Validated November 8, 2026.
+
 ## Environment
 
 - Xcode 27.2, iOS Simulator SDK 27.2.
 - iPhone 17 Pro simulator, iOS 27.0, running in the background.
 - Deployment target: **iOS 26.0**; Swift 6 with complete strict-concurrency checking.
 - Debug app and both test targets built successfully. Release simulator build also passed.
-- No Swift compiler errors or warnings. Xcode emits its routine App Intents metadata-extraction warning because the app has no App Intents dependency.
+- No Swift compiler warnings. Xcode emits its routine App Intents metadata-extraction warning because the app has no App Intents dependency.
 - Project property-list syntax and `git diff --check` pass.
 
 The available runtime is iOS 27.0. iOS 26 API availability is checked by compilation with a 26.0 deployment target; a separate iOS 26 runtime and a physical device have not been tested.
 
 ## Automated coverage
 
-**10 unit tests and 12 UI tests pass across the main run and focused reruns.** The route/options suite was rerun after fixing the switch tap target and keeping Apply visible at accessibility text sizes. Focused options and live-routing checks were repeated after the final layout and address-query refinements.
+**13 unit tests and 14 UI tests pass across the main run and focused reruns.** Focused reruns verified the final loading/no-fit states and corrected test queries for native picker items and combined `LabeledContent` accessibility labels. No test failures remain unresolved.
 
 Unit coverage includes:
 
-- All six loops return to the selected coordinate, sum every leg's distance and time, and advance later departure estimates.
-- Every loop and optional stop combination contains exactly one stop and passes road preferences to all five driving legs, including the return.
-- Actual `MKDirections.Request` objects receive the correct highway and toll preferences for both toggle states.
-- Each scenic style offers distinct alternatives; Surprise me includes all three styles.
-- Retrying a failed alternative preserves completed routes; a new request clears cached choices.
-- Failed return legs never publish partial round trips, coincident waypoints skip zero-length requests, and unsupported starts fail before network work.
-- Cancelled and stale completions are discarded.
+- All 15 nonempty scenery combinations across 30-, 60-, and 90-minute budgets, with and without a stop. Shortlists cover every selected category, remain deterministic, include a compact fallback, and contain at most five distinct candidates.
+- All 12 loops return to the selected coordinate and sum every driving leg's distance and time.
+- All 12 loops with each of the three stop kinds include one timed stop. Stop time contributes to the total and advances the return-leg departure estimate.
+- Budget filtering uses exact seconds: a route at the boundary qualifies, while one exceeding it by a fraction of a second does not. Missing scenery disqualifies a route. Matches are ranked by closest total under budget.
+- Increasing a stop's duration can remove a previously fitting route without dropping the stop or changing the requested budget.
+- No-fit states use actual completed estimates. Empty scenery, a stop consuming the whole budget, and unsupported starts are rejected before network work.
+- Actual `MKDirections.Request` objects receive the selected highway/toll preferences and departure time.
+- Retry preserves completed candidates, including over-budget results; a new request clears cached choices.
+- Failed return legs never publish partial trips. Coincident waypoints skip zero-length requests. Cancelled and stale completions cannot restore old routes or budgets.
 
 UI coverage includes:
 
-- Home defaults, duration selection, handoff, and preserving preferences after returning.
-- Starting-point selection/cancellation, live public-place search, and location permission denial recovery.
-- Primary action reachability at the largest accessibility text size on home and route preview; Apply remains reachable in the options sheet.
-- Swiping selects another card and its matching itinerary; pagination can select the previous route again.
-- Ride style selection, optional coffee stops, highway toggle persistence, Apply, and Cancel.
-- Per-card errors, successful alternatives, retry, and leaving during loading.
-- Three alternatives for Surprise me.
-- Live MapKit directions for all six catalog loops, plus a coffee-stop route with Avoid highways enabled.
+- Home defaults, budget selection, handoff, and preserving preferences when returning.
+- Multiple scenery selections, visible selected state, and the empty-selection guard.
+- Starting-point selection/cancellation, live public-place search, and location-permission denial recovery.
+- Swiping and pagination select the matching map and itinerary, including the final return.
+- Coffee selection, stop-duration changes, highway toggle persistence, Apply, Cancel, and the total-time breakdown.
+- No-fit and impossible-stop states never present over-budget recommendations.
+- Failed alternatives can retry without losing the selected successful route. Loading can be dismissed.
+- Home, options, and route-preview actions remain reachable at the largest accessibility text size.
+- Live MapKit requests for a 30-minute drive, a 60-minute Water + Hills outing with a 15-minute coffee stop, and a 90-minute outing selecting all four scenery categories with a 20-minute walk. Displayed route totals fit the selected budgets, and the stop itineraries return to the selected city starting point.
 
-The live search and directions checks require Apple's services. Other preview UI tests use a debug-only fixture planner. The Release binary excludes the fixture planner and its environment flag. No simulated route is used in the published route screenshot. The view and walk stop combinations have unit coverage; this delivery's live stop smoke test covers coffee.
+The observed live best-fit totals were approximately 24, 54, and 88 minutes respectively. They are observations from this run, not fixed route durations. Some alternatives in the 90-minute search failed to load; the completed matching route remained available with a retry action.
+
+The live search and directions checks require Apple's services. Other preview UI tests use a debug-only fixture planner. The Release binary excludes the fixture planner and its environment flag. The published route screenshot uses live MapKit directions. This delivery's live stop checks cover coffee and walking; view stops have unit coverage.
 
 ## Visual verification
 
-- Inspected simulator captures of the home screen, native options sheet, all six live routes, and the largest-text options/preview layouts.
-- Confirmed native glass cards, visible selected state, card peeking and pagination, road polylines, real estimates, Apple Maps attribution, and the itinerary action.
-- Inspected live address-search results for the road catalog. Normalized the downtown intersection queries so Lamar and the Capitol district resolve to their named intersections; Scenic Drive uses a road waypoint.
-- Choice grids become one column at accessibility sizes; panels and the options form scroll. Stop cards use a shared scaled minimum height.
+- Inspected native captures of multiple scenery selection, the stop-time options sheet, all three live budget results, a stop itinerary, and the largest-text options and preview layouts.
+- Confirmed selected glass controls, card peeking and pagination, road polylines, total-time estimates, driving/stop breakdowns, Apple Maps attribution, and the itinerary action.
+- Checked public address-search results for the new Bull Creek area and City Park Road anchors. Lakewood Drive is represented as a road waypoint; City Park Road resolves at Pearce Road.
+- Choice grids become one column at accessibility sizes; panels and the options form scroll. Apply stays above the sheet's safe area.
 - Toolbar controls retain the native system appearance. Cards and buttons use `.glass` and `.glassProminent`; content panels use `.regularMaterial`.
-- Included [home](docs/home-screen.png), [live route preview](docs/route-preview.png), and [options sheet](docs/ride-options.png) screenshots with the generic Austin starting point. Image metadata is stripped and pixel content is preserved.
+- Updated [home](docs/home-screen.png), [live route preview](docs/route-preview.png), and [options sheet](docs/ride-options.png) screenshots. Image metadata is stripped with pixel content preserved.
 
 ## Scope and privacy
 
-Routes use a small curated catalog of public Austin roads and destinations. MapKit chooses connecting roads and estimates driving time. Duration remains a target, stop time is extra, and routes may retrace roads. Road avoidance is a preference rather than a guarantee. Vehicle connectivity, booking, in-ride guidance, opening-hours checks, and duration optimization are not included.
+Routes use 12 curated public-road loops and three optional public destinations. Every recommendation covers the selected scenery tags and fits the total budget using its MapKit driving estimates plus planned stop time. The planner checks at most five candidates and shows up to three matches; it does not exhaustively search Austin's roads or promise to use every minute. A matching route outside the shortlist may exist.
+
+Scenery tags describe portions of the outing, including the chosen stop. MapKit chooses connecting roads, which can retrace portions of the trip. Road avoidance is a preference. Traffic, parking, access, and time actually spent at a stop can change the total. Opening-hours checks, vehicle connectivity, booking, in-ride guidance, and language-model integration are not included.
 
 Live device GPS acquisition remains untested. Map tiles, directions, estimates, and Liquid Glass appearance can vary with connectivity, OS version, traffic, and accessibility settings.
 
-Personal addresses, identity metadata, credentials, signing files, local paths, logs, and raw test results are excluded from the repository. Only the approved GitHub handle and noreply commit attribution are retained. Public screenshots use the generic city starting point, not a device location.
+Personal addresses, identity metadata, credentials, signing files, local paths, logs, and raw test results are excluded from the repository. Only the approved GitHub handle and noreply commit attribution are retained. Public screenshots use the generic Austin starting point, not a device location.

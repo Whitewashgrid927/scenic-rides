@@ -12,31 +12,44 @@ struct RouteAnchor: Identifiable {
     }
 }
 
-/// Public roads and intersections shape drive-only loops; a selected stop is added separately.
+/// Curated public corridors. Planning hints only choose a bounded shortlist;
+/// live driving estimates decide whether a round trip fits the budget.
 enum AustinLoop: Int, CaseIterable, Identifiable {
     case parks, riverside, hills, lake, skyline, eastside
+    case riverAndHills, austinHighlights, hillCountry, grandAustin, riverfront, cityCenter
     var id: Int { rawValue }
 
-    static func suggestions(style: RideStyle, duration: RideDuration) -> [Self] {
-        let choices: [Self]
-        switch style {
-        case .water: choices = [.parks, .riverside]
-        case .hills: choices = [.hills, .lake]
-        case .city: choices = [.skyline, .eastside]
-        case .surprise:
-            // One choice from each style, chosen once when the preview is created.
-            return [duration == .ninety ? .riverside : .parks,
-                    duration == .ninety ? .lake : .hills,
-                    duration == .ninety ? .eastside : .skyline].shuffled()
+    static func candidates(for request: RideRequest) -> [Self] {
+        guard !request.scenery.isEmpty else { return [] }
+        let matching = allCases.filter { request.scenery.isSubset(of: $0.scenery(options: request.options)) }
+        let ordered = matching.sorted {
+            let lhs = abs($0.planningMinutes + request.options.stopMinutes - request.duration.rawValue)
+            let rhs = abs($1.planningMinutes + request.options.stopMinutes - request.duration.rawValue)
+            return lhs == rhs ? $0.rawValue < $1.rawValue : lhs < rhs
         }
-        return duration == .ninety ? choices.reversed() : choices
+        var choices = Array(ordered.prefix(4))
+        // Always check a compact matching alternative before declaring no fit.
+        if let shortest = matching.min(by: { $0.planningMinutes < $1.planningMinutes }), !choices.contains(shortest) {
+            choices.append(shortest)
+        }
+        return choices
     }
 
-    var style: RideStyle {
+    var scenery: Set<Scenery> {
         switch self {
-        case .parks, .riverside: .water
-        case .hills, .lake: .hills
-        case .skyline, .eastside: .city
+        case .parks, .riverside, .riverfront: [.water, .greenery, .city]
+        case .hills, .lake, .hillCountry: [.water, .hills, .greenery]
+        case .skyline, .eastside, .cityCenter: [.city]
+        case .riverAndHills, .austinHighlights, .grandAustin: Set(Scenery.allCases)
+        }
+    }
+
+    func scenery(options: RideOptions) -> Set<Scenery> {
+        guard options.pace == .stop else { return scenery }
+        switch options.stopKind {
+        case .coffee: return scenery.union([.water])
+        case .view: return scenery.union([.water, .hills, .greenery])
+        case .walk: return scenery.union([.greenery, .city])
         }
     }
 
@@ -48,6 +61,39 @@ enum AustinLoop: Int, CaseIterable, Identifiable {
         case .lake: "Westlake wander"
         case .skyline: "City & skyline"
         case .eastside: "East Austin loop"
+        case .riverAndHills: "River, hills & skyline"
+        case .austinHighlights: "Austin highlights"
+        case .hillCountry: "A little farther west"
+        case .grandAustin: "The long scenic way"
+        case .riverfront: "A moment by the river"
+        case .cityCenter: "Around downtown"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .hills, .lake, .hillCountry: "mountain.2"
+        case .skyline, .eastside, .cityCenter: "building.2"
+        case .grandAustin, .austinHighlights: "leaf"
+        default: "water.waves"
+        }
+    }
+
+    /// Approximate city-center values for shortlisting, never displayed as ETAs.
+    private var planningMinutes: Int {
+        switch self {
+        case .parks: 25
+        case .riverside: 25
+        case .hills: 35
+        case .lake: 30
+        case .skyline: 25
+        case .eastside: 20
+        case .riverAndHills: 45
+        case .austinHighlights: 55
+        case .hillCountry: 65
+        case .grandAustin: 80
+        case .riverfront: 12
+        case .cityCenter: 15
         }
     }
 
@@ -59,6 +105,12 @@ enum AustinLoop: Int, CaseIterable, Identifiable {
         case .lake: [.redbudRoad, .westlakeDrive, .beeCaves]
         case .skyline: [.southCongress, .capitol, .lamar]
         case .eastside: [.eastSixth, .chicon, .holly]
+        case .riverAndHills: [.riversideRoad, .lakeAustin, .scenicDrive, .bonnellRoad]
+        case .austinHighlights: [.southCongress, .bartonSprings, .redbudRoad, .westlakeDrive, .beeCaves, .capitol]
+        case .hillCountry: [.lakeAustin, .scenicDrive, .bonnellRoad, .bullCreekRoad, .cityParkRoad]
+        case .grandAustin: [.southCongress, .riversideRoad, .redbudRoad, .cityParkRoad, .bullCreekRoad, .bonnellRoad, .capitol]
+        case .riverfront: [.riversideRoad]
+        case .cityCenter: [.capitol, .lamar]
         }
     }
 
@@ -97,9 +149,11 @@ private extension RouteAnchor {
     static let eastSixth = Self(id: "sixth-road", name: "East Sixth Street", address: "East 6th Street & Comal Street")
     static let chicon = Self(id: "chicon-road", name: "East Austin", address: "Chicon Street & East Cesar Chavez Street")
     static let holly = Self(id: "holly-road", name: "Holly neighborhood", address: "Holly Street & Chicon Street")
+    static let bullCreekRoad = Self(id: "bull-creek-road", name: "Bull Creek area", address: "Lakewood Drive")
+    static let cityParkRoad = Self(id: "city-park-road", name: "City Park Road", address: "City Park Rd & Pearce Rd")
     static let coffee = Self(id: "coffee-stop", name: "Mozart’s Coffee Roasters", address: "3825 Lake Austin Blvd", note: "Check opening hours before stopping.", isStop: true)
     static let mountBonnell = Self(id: "view-stop", name: "Mount Bonnell", address: "3800 Mount Bonnell Rd", note: "The overlook is reached on foot. Check access before stopping.", isStop: true)
-    static let butlerPark = Self(id: "walk-stop", name: "Butler Park", address: "1000 Barton Springs Rd", note: "Time for a walk is extra. Check park access before stopping.", isStop: true)
+    static let butlerPark = Self(id: "walk-stop", name: "Butler Park", address: "1000 Barton Springs Rd", note: "Check park access before stopping.", isStop: true)
 }
 
 struct RouteWaypoint: Identifiable {
@@ -129,7 +183,17 @@ struct ScenicRoute: Identifiable {
     var highlights: [RouteWaypoint] { Array(waypoints.dropFirst().dropLast()) }
     var distance: CLLocationDistance { legs.reduce(0) { $0 + $1.distance } }
     var expectedTravelTime: TimeInterval { legs.reduce(0) { $0 + $1.expectedTravelTime } }
-    var minutes: Int { max(1, Int(ceil(expectedTravelTime / 60))) }
+    var drivingMinutes: Int { max(0, Int(ceil(expectedTravelTime / 60))) }
+    var stopMinutes: Int { options.stopMinutes }
+    var totalTime: TimeInterval { expectedTravelTime + options.stopTime }
+    var minutes: Int { max(1, Int(ceil(totalTime / 60))) }
+    var breakdown: String {
+        stopMinutes > 0 ? "\(drivingMinutes) min drive + \(stopMinutes) min stop" : "\(drivingMinutes) min driving"
+    }
+
+    func fits(_ request: RideRequest) -> Bool {
+        totalTime <= request.budget && request.scenery.isSubset(of: loop.scenery(options: options))
+    }
     var distanceLabel: String {
         "\((distance / 1_609.344).formatted(.number.precision(.fractionLength(1)))) mi"
     }
@@ -147,4 +211,6 @@ struct ScenicRoute: Identifiable {
 enum RoutePlanningError: Error, Equatable {
     case outsideAustin
     case unavailable
+    case invalidPreferences
+    case stopExceedsBudget
 }

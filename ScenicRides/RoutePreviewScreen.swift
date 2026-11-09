@@ -6,7 +6,6 @@ struct RoutePreviewScreen: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: RoutePreviewModel
-    @State private var loops: [AustinLoop]
     @State private var selection: AustinLoop?
     @State private var camera: MapCameraPosition = .region(StartingPlace.austinMapRegion)
     @State private var loadID = UUID()
@@ -15,22 +14,16 @@ struct RoutePreviewScreen: View {
 
     init(request: RideRequest, planner: (any RoutePlanning)? = nil) {
         self.request = request
-        let choices = AustinLoop.suggestions(style: request.style, duration: request.duration)
-        _loops = State(initialValue: choices)
-        _selection = State(initialValue: choices.first)
         _model = State(initialValue: RoutePreviewModel(planner: planner ?? RoutePlannerFactory.make()))
     }
 
-    private var selectedLoop: AustinLoop { selection ?? loops[0] }
-    private var selectedRoute: ScenicRoute? { model.route(for: selectedLoop) }
+    private var selectedRoute: ScenicRoute? { model.routes.first { $0.loop == selection } ?? model.routes.first }
+    private var showingRoutes: Bool { !model.routes.isEmpty && (!model.isLoading || selection != nil) }
 
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
-                routeMap
-                    .safeAreaInset(edge: .bottom, spacing: 0) {
-                        routePanel(size: geometry.size)
-                    }
+                routeMap.safeAreaInset(edge: .bottom, spacing: 0) { routePanel(size: geometry.size) }
             }
             .background(Color(uiColor: .systemBackground))
             .navigationTitle("Choose your loop")
@@ -44,23 +37,27 @@ struct RoutePreviewScreen: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Show whole route", systemImage: "arrow.up.left.and.arrow.down.right") { fitRoute() }
                         .labelStyle(.iconOnly)
-                        .disabled(selectedRoute == nil)
+                        .disabled(!showingRoutes)
                         .accessibilityIdentifier("fitRoute")
                 }
             }
-            .task(id: loadID) {
-                await model.loadChoices(request, loops: loops, prioritizing: selectedLoop)
+            .task(id: loadID) { await model.loadChoices(request) }
+            .onChange(of: model.isLoading) { _, loading in
+                if !loading {
+                    if !model.routes.contains(where: { $0.loop == selection }) { selection = model.routes.first?.loop }
+                    fitRoute()
+                }
             }
-            .onChange(of: selectedRoute?.id) { _, _ in fitRoute() }
+            .onChange(of: selection) { _, _ in fitRoute() }
             .sheet(item: $detailRoute) { route in
-                RouteStopsSheet(route: route).preferredColorScheme(.dark)
+                RouteStopsSheet(route: route, budget: request.duration.rawValue).preferredColorScheme(.dark)
             }
         }
     }
 
     private var routeMap: some View {
         Map(position: $camera, interactionModes: [.pan, .zoom, .rotate]) {
-            if let route = selectedRoute {
+            if showingRoutes, let route = selectedRoute {
                 ForEach(route.legs) { leg in
                     MapPolyline(leg.polyline)
                         .stroke(.blue, style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
@@ -84,7 +81,7 @@ struct RoutePreviewScreen: View {
         .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
         .mapControls { MapCompass() }
         .accessibilityLabel("Austin round trip map")
-        .accessibilityValue(selectedRoute?.loop.name ?? "Loading selected route")
+        .accessibilityValue(showingRoutes ? selectedRoute?.loop.name ?? "" : "Finding routes")
         .accessibilityIdentifier("routeMap")
     }
 
@@ -101,107 +98,108 @@ struct RoutePreviewScreen: View {
         }
         .background {
             UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32)
-                .fill(.regularMaterial)
-                .ignoresSafeArea(edges: .bottom)
+                .fill(.regularMaterial).ignoresSafeArea(edges: .bottom)
         }
     }
 
     private func panelContent(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("A few ways to unwind.")
-                    .font(.title2.bold())
-                    .accessibilityAddTraits(.isHeader)
-                Text("\(request.duration.rawValue) min target · \(request.options.summary)")
+                Text(showingRoutes ? "A little time, well spent." : model.isLoading ? "Finding your kind of ride." : "Your next scenic ride.")
+                    .font(.title2.bold()).accessibilityAddTraits(.isHeader)
+                Text("\(request.duration.rawValue) min budget · \(request.options.summary)")
                     .font(.subheadline).foregroundStyle(.secondary)
                     .accessibilityIdentifier("routeTarget")
             }
             .padding(.horizontal, 24)
 
-            routeCards(width: width)
-
-            HStack(spacing: 0) {
-                ForEach(Array(loops.enumerated()), id: \.element) { index, loop in
-                    Button { choose(loop) } label: {
-                        Circle().fill(selectedLoop == loop ? .blue : Color.secondary.opacity(0.5))
-                            .frame(width: 7, height: 7)
-                            .frame(width: 36, height: 30)
-                            .contentShape(.rect)
+            if showingRoutes {
+                routeCards(width: width)
+                HStack(spacing: 0) {
+                    ForEach(Array(model.routes.enumerated()), id: \.element.loop) { index, route in
+                        Button { choose(route.loop) } label: {
+                            Circle().fill(selectedRoute?.loop == route.loop ? .blue : Color.secondary.opacity(0.5))
+                                .frame(width: 7, height: 7).frame(width: 44, height: 44).contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Route \(index + 1) of \(model.routes.count), \(route.loop.name)")
+                        .accessibilityAddTraits(selectedRoute?.loop == route.loop ? .isSelected : [])
+                        .accessibilityIdentifier("routePage-\(index)")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Route \(index + 1) of \(loops.count), \(loop.name)")
-                    .accessibilityAddTraits(selectedLoop == loop ? .isSelected : [])
-                    .accessibilityIdentifier("routePage-\(index)")
                 }
-            }
-            .frame(maxWidth: .infinity)
-
-            Group {
-                switch model.state(for: selectedLoop) {
-                case .loading:
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("Finding the scenic way…").font(.subheadline)
+                .frame(maxWidth: .infinity)
+                VStack(spacing: 12) {
+                    if model.hasFailures {
+                        Button(model.isLoading ? "Checking alternatives…" : "Some routes couldn’t load. Retry") { loadID = UUID() }
+                            .font(.caption).disabled(model.isLoading)
+                            .accessibilityIdentifier("retryRoute")
                     }
-                    .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier("routeLoading")
-                case .ready:
                     Label("Returns to \(request.startingPlace.name)", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
                         .font(.subheadline).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
                         .accessibilityIdentifier("routeReturn")
                     Button { detailRoute = selectedRoute } label: {
                         Label("View route", systemImage: "arrow.right")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .font(.headline).frame(maxWidth: .infinity, minHeight: 48)
                     }
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.capsule)
+                    .buttonStyle(.glassProminent).buttonBorderShape(.capsule)
                     .accessibilityIdentifier("viewRouteStops")
-                case let .failed(error):
-                    failureDetails(error)
                 }
+                .frame(maxWidth: .infinity).padding(.horizontal, 24)
+            } else if model.isLoading {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("Checking scenery, stops and the way back…").font(.subheadline)
+                    Text("\(model.checkedCount) of \(model.candidateCount) routes checked")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity).padding(24)
+                .accessibilityIdentifier("routeLoading")
+            } else {
+                noRoutes.padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
         }
-        .padding(.top, 24)
-        .padding(.bottom, 28)
+        .padding(.top, 24).padding(.bottom, 24)
     }
 
     private func routeCards(width: CGFloat) -> some View {
         ScrollView(.horizontal) {
             HStack(spacing: 14) {
-                ForEach(loops) { loop in
-                    Button { choose(loop) } label: {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Image(systemName: loop.style.symbol)
-                                .font(.title2).foregroundStyle(.blue)
-                            Text(loop.name)
-                                .font(.title3.bold())
+                ForEach(Array(model.routes.enumerated()), id: \.element.loop) { index, route in
+                    Button { choose(route.loop) } label: {
+                        VStack(alignment: .leading, spacing: 9) {
+                            HStack {
+                                Image(systemName: route.loop.symbol).font(.title3).foregroundStyle(.blue)
+                                Spacer()
+                                Text(index == 0 ? "Best fit" : "Another way").font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(route.loop.name).font(.title3.bold()).fixedSize(horizontal: false, vertical: true)
+                            Text("About \(route.minutes) min total")
+                                .font(.headline)
+                                .accessibilityIdentifier("routeTotal-\(route.loop.rawValue)")
+                            Text("\(route.breakdown) · \(route.distanceLabel)")
+                                .font(.caption).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
-                            cardEstimate(loop)
-                                .font(.subheadline).foregroundStyle(.secondary)
-                            Text(loop.style.name)
-                                .font(.caption.weight(.medium))
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(.quaternary, in: .capsule)
+                            Text(request.sceneryLabel)
+                                .font(.caption.weight(.medium)).foregroundStyle(.blue)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("\(request.duration.rawValue - route.minutes) min to spare · traffic may change")
+                                .font(.caption2).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .frame(maxWidth: .infinity, minHeight: 142, alignment: .leading)
-                        .padding(18)
-                        .contentShape(.rect)
+                        .frame(maxWidth: .infinity, minHeight: 166, alignment: .leading)
+                        .padding(18).contentShape(.rect)
                     }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.roundedRectangle(radius: 24))
-                    .tint(.white)
+                    .buttonStyle(.glass).buttonBorderShape(.roundedRectangle(radius: 24)).tint(.white)
                     .overlay {
                         RoundedRectangle(cornerRadius: 24)
-                            .strokeBorder(selectedLoop == loop ? Color.blue : .clear, lineWidth: 2)
+                            .strokeBorder(selectedRoute?.loop == route.loop ? Color.blue : .clear, lineWidth: 2)
                             .allowsHitTesting(false)
                     }
                     .frame(width: max(220, width - (dynamicTypeSize.isAccessibilitySize ? 48 : 88)))
-                    .id(loop)
-                    .accessibilityAddTraits(selectedLoop == loop ? .isSelected : [])
-                    .accessibilityIdentifier("routeCard-\(loop.rawValue)")
+                    .id(route.loop)
+                    .accessibilityAddTraits(selectedRoute?.loop == route.loop ? .isSelected : [])
+                    .accessibilityIdentifier("routeCard-\(route.loop.rawValue)")
                 }
             }
             .scrollTargetLayout()
@@ -213,35 +211,45 @@ struct RoutePreviewScreen: View {
         .accessibilityIdentifier("routeCards")
     }
 
-    @ViewBuilder
-    private func cardEstimate(_ loop: AustinLoop) -> some View {
-        switch model.state(for: loop) {
-        case let .ready(route):
-            Text("About \(route.minutes) min · \(route.distanceLabel)")
-        case .loading:
-            Text("Calculating drive…")
-        case .failed:
-            Text("Route unavailable")
+    private var noRoutes: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(emptyTitle).font(.headline).accessibilityIdentifier("routeError")
+            Text(emptyMessage).font(.subheadline).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("routeEmptyMessage")
+            Button("Adjust my ride") { dismiss() }
+                .buttonStyle(.glassProminent).buttonBorderShape(.capsule).controlSize(.large)
+                .accessibilityIdentifier("adjustRide")
+            if model.failure == .unavailable || model.hasFailures {
+                Button("Try again") { loadID = UUID() }
+                    .buttonStyle(.glass).buttonBorderShape(.capsule)
+                    .accessibilityIdentifier("retryRoute")
+            }
         }
     }
 
-    private func failureDetails(_ error: RoutePlanningError) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(error == .outsideAustin ? "Let’s start in Austin" : "This route couldn’t load")
-                .font(.headline)
-                .accessibilityIdentifier("routeError")
-            Text(error == .outsideAustin
-                 ? "Choose a starting point in the Austin area."
-                 : "Try again or swipe to another route. Your preferences are still here.")
-                .font(.subheadline).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Button(error == .outsideAustin ? "Back to starting point" : "Try again") {
-                if error == .outsideAustin { dismiss() } else { loadID = UUID() }
+    private var emptyTitle: String {
+        switch model.failure {
+        case .outsideAustin: "Let’s start in Austin"
+        case .invalidPreferences: "Choose some scenery"
+        case .stopExceedsBudget: "Leave some time for the drive"
+        case .unavailable: "Routes couldn’t load"
+        case nil: "Let’s give this ride more time"
+        }
+    }
+
+    private var emptyMessage: String {
+        switch model.failure {
+        case .outsideAustin: "Choose a starting point in the Austin area."
+        case .invalidPreferences: "Select at least one kind of scenery to find a ride."
+        case .stopExceedsBudget: "Your \(request.options.stopMinutes)-minute stop uses the whole budget. Shorten the stop or allow more time."
+        case .unavailable: "Check your connection and try again. Your choices are still here."
+        case nil:
+            if let minutes = model.shortestMinutes {
+                "None of the checked routes fits your \(request.duration.rawValue)-minute budget and scenery choices. The shortest checked takes about \(minutes) minutes including stops. Try more time, fewer scenery choices or a shorter stop.\(model.hasFailures ? " Some alternatives couldn’t load." : "")"
+            } else {
+                "Try another scenery combination or starting point. Your choices are still here."
             }
-            .buttonStyle(.glassProminent)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-            .accessibilityIdentifier("retryRoute")
         }
     }
 
@@ -250,7 +258,7 @@ struct RoutePreviewScreen: View {
     }
 
     private func fitRoute() {
-        guard let route = selectedRoute else { return }
+        guard let route = selectedRoute, showingRoutes else { return }
         withAnimation(reduceMotion ? nil : .smooth(duration: 0.5)) { camera = .rect(route.mapRect) }
     }
 }
@@ -258,47 +266,44 @@ struct RoutePreviewScreen: View {
 private struct RouteStopsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let route: ScenicRoute
+    let budget: Int
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
+                    LabeledContent("Whole trip", value: "About \(route.minutes) min")
+                    LabeledContent("Driving, including return", value: "\(route.drivingMinutes) min")
+                    LabeledContent("Time at stop", value: "\(route.stopMinutes) min")
+                    LabeledContent("Your budget", value: "\(budget) min")
+                }
+                .accessibilityIdentifier("routeTimeBreakdown")
+                Section {
                     ForEach(Array(route.waypoints.enumerated()), id: \.element.id) { index, waypoint in
                         HStack(alignment: .top, spacing: 14) {
                             Image(systemName: index == 0 || index == route.waypoints.count - 1
                                   ? "arrow.trianglehead.2.clockwise.rotate.90" : "\(index).circle.fill")
-                                .foregroundStyle(.blue)
-                                .frame(width: 24)
-                                .accessibilityHidden(true)
+                                .foregroundStyle(.blue).frame(width: 24).accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(index == 0 ? "Start" : index == route.waypoints.count - 1 ? "Return" : waypoint.isStop ? "\(route.options.stopKind.name) stop" : "Drive through")
+                                Text(index == 0 ? "Start" : index == route.waypoints.count - 1 ? "Return" : waypoint.isStop ? "\(route.options.stopMinutes) min stop" : "Drive through")
                                     .font(.caption).foregroundStyle(.secondary)
                                 Text(waypoint.name).font(.headline)
-                                if !waypoint.detail.isEmpty {
-                                    Text(waypoint.detail).font(.subheadline).foregroundStyle(.secondary)
-                                }
-                                if let note = waypoint.note {
-                                    Text(note).font(.caption).foregroundStyle(.secondary)
-                                }
+                                if !waypoint.detail.isEmpty { Text(waypoint.detail).font(.subheadline).foregroundStyle(.secondary) }
+                                if let note = waypoint.note { Text(note).font(.caption).foregroundStyle(.secondary) }
                             }
                         }
                         .padding(.vertical, 5)
                         .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("routeStop-\(index)")
+                        .accessibilityIdentifier(waypoint.id == "return" ? "routeStop-return" : waypoint.isStop ? "routeStop-optional" : "routeStop-\(index)")
                     }
                 } header: {
                     Text(route.loop.name)
                 } footer: {
-                    Text(route.options.pace == .stop
-                         ? "About \(route.minutes) minutes of driving. Time at your stop is extra; check opening hours and access."
-                         : "About \(route.minutes) minutes of driving. Waypoints shape the drive; no stop is scheduled.")
+                    Text("Driving estimates may change with traffic.\(route.stopMinutes > 0 ? " Your planned stop time is included; check opening hours and access." : " Waypoints shape the drive; no stop is scheduled.")")
                 }
             }
-            .navigationTitle("Your route")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
-            }
+            .navigationTitle("Your route").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .presentationDetents([.large])
     }
@@ -307,9 +312,7 @@ private struct RouteStopsSheet: View {
 enum RoutePlannerFactory {
     @MainActor static func make() -> any RoutePlanning {
         #if DEBUG
-        if let scenario = ProcessInfo.processInfo.environment["SCENIC_ROUTE_TEST_SCENARIO"] {
-            return PreviewTestRoutePlanner(scenario: scenario)
-        }
+        if let scenario = ProcessInfo.processInfo.environment["SCENIC_ROUTE_TEST_SCENARIO"] { return PreviewTestRoutePlanner(scenario: scenario) }
         #endif
         return MapKitRoutePlanner()
     }

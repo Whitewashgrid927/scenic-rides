@@ -7,7 +7,7 @@ struct HomeScreen: View {
     @State private var location = LocationService()
     @State private var startingPlace = StartingPlace.austin
     @State private var duration: RideDuration = .sixty
-    @State private var style: RideStyle = .water
+    @State private var scenery: Set<Scenery> = [.water]
     @State private var options = RideOptions()
     @State private var isChoosingOptions = false
     @State private var camera: MapCameraPosition = .region(StartingPlace.austinMapRegion)
@@ -114,11 +114,11 @@ struct HomeScreen: View {
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Ride length")
+                Text("Time for the whole trip")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Picker("Ride length", selection: $duration) {
+                Picker("Time budget, including stops", selection: $duration) {
                     ForEach(RideDuration.allCases) { choice in
                         Text(choice.label).tag(choice)
                     }
@@ -128,13 +128,24 @@ struct HomeScreen: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Your kind of ride")
-                    .font(.subheadline).foregroundStyle(.secondary)
+                HStack {
+                    Text("What would you like to see?")
+                    Spacer()
+                    Text("Pick a few").font(.caption)
+                }
+                .font(.subheadline).foregroundStyle(.secondary)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
-                    ForEach(RideStyle.allCases) { choice in
-                        RideChoiceButton(title: choice.name, symbol: choice.symbol, selected: style == choice) { style = choice }
-                            .accessibilityIdentifier("rideStyle-\(choice.rawValue)")
+                    ForEach(Scenery.allCases) { choice in
+                        RideChoiceButton(title: choice.name, symbol: choice.symbol, selected: scenery.contains(choice)) {
+                            if scenery.contains(choice) { scenery.remove(choice) } else { scenery.insert(choice) }
+                        }
+                        .accessibilityHint("Add or remove this scenery")
+                        .accessibilityIdentifier("scenery-\(choice.rawValue)")
                     }
+                }
+                if scenery.isEmpty {
+                    Text("Choose at least one kind of scenery.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
 
@@ -156,10 +167,10 @@ struct HomeScreen: View {
             .accessibilityIdentifier("rideOptions")
 
             Button {
-                onFindRide(RideRequest(startingPlace: startingPlace, duration: duration, style: style, options: options))
+                onFindRide(RideRequest(startingPlace: startingPlace, duration: duration, scenery: scenery, options: options))
             } label: {
                 HStack(spacing: 10) {
-                    Text("Find a scenic ride")
+                    Text("Find my ride")
                     Image(systemName: "arrow.right")
                         .accessibilityHidden(true)
                 }
@@ -170,6 +181,7 @@ struct HomeScreen: View {
             .buttonStyle(.glassProminent)
             .buttonBorderShape(.capsule)
             .tint(.blue)
+            .disabled(scenery.isEmpty)
             .accessibilityIdentifier("findRide")
 
             Text("Returns to your starting point")

@@ -34,6 +34,14 @@ struct RideOptionsSheet: View {
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
                     }
+                    Section {
+                        Picker("Time at stop", selection: $draft.stopDuration) {
+                            ForEach(StopDuration.allCases) { Text($0.label).tag($0) }
+                        }
+                        .accessibilityIdentifier("stopTime")
+                    } footer: {
+                        Text("Included in your time budget, along with the drive back.")
+                    }
                 }
                 Section {
                     Toggle("Avoid highways", isOn: $draft.roads.avoidHighways)

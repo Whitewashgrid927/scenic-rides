@@ -1,0 +1,993 @@
+{
+  "anchors": [
+    {
+      "address": "Barton Springs Road & Azie Morton Road",
+      "id": "barton-road",
+      "latitude": 30.2647858,
+      "longitude": -97.7649432,
+      "name": "Barton Springs Road"
+    },
+    {
+      "address": "Lake Austin Boulevard & Exposition Boulevard",
+      "id": "lake-road",
+      "latitude": 30.2831732,
+      "longitude": -97.7767808,
+      "name": "Lake Austin Boulevard"
+    },
+    {
+      "address": "West Riverside Drive & South First Street",
+      "id": "riverside-road",
+      "latitude": 30.2597815,
+      "longitude": -97.7493048,
+      "name": "Riverside Drive"
+    },
+    {
+      "address": "Lakeshore Boulevard & South Pleasant Valley Road",
+      "id": "lakeshore-road",
+      "latitude": 30.2424984,
+      "longitude": -97.7172005,
+      "name": "Lakeshore Boulevard"
+    },
+    {
+      "address": "South Pleasant Valley Road & East Cesar Chavez Street",
+      "id": "pleasant-road",
+      "latitude": 30.2529913,
+      "longitude": -97.7128052,
+      "name": "Pleasant Valley Road"
+    },
+    {
+      "address": "Scenic Drive",
+      "id": "scenic-road",
+      "latitude": 30.2961156,
+      "longitude": -97.783798,
+      "name": "Scenic Drive"
+    },
+    {
+      "address": "Mount Bonnell Road & Mount Bonnell Drive",
+      "id": "bonnell-road",
+      "latitude": 30.3236033,
+      "longitude": -97.7733863,
+      "name": "Mount Bonnell Road"
+    },
+    {
+      "address": "Redbud Trail & Lake Austin Boulevard",
+      "id": "redbud-road",
+      "latitude": 30.2915614,
+      "longitude": -97.783057,
+      "name": "Redbud Trail"
+    },
+    {
+      "address": "Westlake Drive & Redbud Trail",
+      "id": "westlake-road",
+      "latitude": 30.2923277,
+      "longitude": -97.7984375,
+      "name": "Westlake Drive"
+    },
+    {
+      "address": "Bee Caves Road & Westlake Drive",
+      "id": "bee-caves-road",
+      "latitude": 30.2815172,
+      "longitude": -97.8087086,
+      "name": "Bee Caves Road"
+    },
+    {
+      "address": "South Congress Avenue & West Monroe Street",
+      "id": "congress-road",
+      "latitude": 30.2479745,
+      "longitude": -97.7502783,
+      "name": "South Congress"
+    },
+    {
+      "address": "Congress Ave & E 11th St",
+      "id": "capitol-road",
+      "latitude": 30.272546542584433,
+      "longitude": -97.74043108920704,
+      "name": "Capitol district"
+    },
+    {
+      "address": "W 6th St & N Lamar Blvd",
+      "id": "lamar-road",
+      "latitude": 30.2715464,
+      "longitude": -97.7539784,
+      "name": "Lamar Boulevard"
+    },
+    {
+      "address": "East 6th Street & Comal Street",
+      "id": "sixth-road",
+      "latitude": 30.2630529,
+      "longitude": -97.7265548,
+      "name": "East Sixth Street"
+    },
+    {
+      "address": "Chicon Street & East Cesar Chavez Street",
+      "id": "chicon-road",
+      "latitude": 30.2571198,
+      "longitude": -97.7246308,
+      "name": "East Austin"
+    },
+    {
+      "address": "Holly Street & Chicon Street",
+      "id": "holly-road",
+      "latitude": 30.2534914,
+      "longitude": -97.7262966,
+      "name": "Holly neighborhood"
+    },
+    {
+      "address": "Lakewood Drive",
+      "id": "bull-creek-road",
+      "latitude": 30.3662148,
+      "longitude": -97.7871371,
+      "name": "Bull Creek area"
+    },
+    {
+      "address": "City Park Rd & Pearce Rd",
+      "id": "city-park-road",
+      "latitude": 30.3334183,
+      "longitude": -97.8337678,
+      "name": "City Park Road"
+    },
+    {
+      "address": "Shoal Creek Blvd & W 38th St",
+      "id": "shoal-road",
+      "latitude": 30.3070698,
+      "longitude": -97.7475281,
+      "name": "Shoal Creek Boulevard"
+    },
+    {
+      "address": "Shoal Creek Blvd & Hancock Dr",
+      "id": "hancock-road",
+      "latitude": 30.3255863,
+      "longitude": -97.7449614,
+      "name": "Hancock Drive"
+    },
+    {
+      "address": "Shoal Creek Blvd & W 45th St",
+      "id": "northwest-road",
+      "latitude": 30.317473,
+      "longitude": -97.74611,
+      "name": "Northwest Park area"
+    },
+    {
+      "address": "Duval St & E 43rd St",
+      "id": "hyde-road",
+      "latitude": 30.3046647,
+      "longitude": -97.7260923,
+      "name": "Hyde Park"
+    },
+    {
+      "address": "Avenue G & E 45th St",
+      "id": "shipe-road",
+      "latitude": 30.3077441,
+      "longitude": -97.7265005,
+      "name": "Shipe Park area"
+    },
+    {
+      "address": "North Loop Blvd & Guadalupe St",
+      "id": "northLoop-road",
+      "latitude": 30.3199547,
+      "longitude": -97.7269831,
+      "name": "North Loop"
+    },
+    {
+      "address": "Aldrich St & Simond Ave",
+      "id": "mueller-road",
+      "latitude": 30.2982361,
+      "longitude": -97.7057143,
+      "name": "Mueller lake district"
+    },
+    {
+      "address": "Berkman Dr & Tom Miller St",
+      "id": "berkman-road",
+      "latitude": 30.2901328,
+      "longitude": -97.6986774,
+      "name": "Mueller greenway"
+    },
+    {
+      "address": "Zach Scott St & Airport Blvd",
+      "id": "zachScott-road",
+      "latitude": 30.2941624,
+      "longitude": -97.7077781,
+      "name": "Zach Scott Street"
+    },
+    {
+      "address": "Cherrywood Rd & E 38 1/2 St",
+      "id": "cherrywood-road",
+      "latitude": 30.2917471,
+      "longitude": -97.7135781,
+      "name": "Cherrywood"
+    },
+    {
+      "address": "Manor Rd & Chestnut Ave",
+      "id": "manor-road",
+      "latitude": 30.2844478,
+      "longitude": -97.7181835,
+      "name": "Manor Road"
+    },
+    {
+      "address": "N Lamar Blvd & Walnut Park Crossing",
+      "id": "walnut-road",
+      "latitude": 30.3975469,
+      "longitude": -97.679636,
+      "name": "Walnut Creek area"
+    },
+    {
+      "address": "Lamplight Village Ave & Metric Blvd",
+      "id": "parkBend-road",
+      "latitude": 30.4106462,
+      "longitude": -97.6954409,
+      "name": "Lamplight Village"
+    },
+    {
+      "address": "Gracy Farms Ln & Metric Blvd",
+      "id": "gracy-road",
+      "latitude": 30.3983493,
+      "longitude": -97.7044913,
+      "name": "Gracy Farms"
+    },
+    {
+      "address": "Amherst Dr & Cassady Dr",
+      "id": "balcones-road",
+      "latitude": 30.4197309,
+      "longitude": -97.7168017,
+      "name": "Balcones Park area"
+    },
+    {
+      "address": "Duval Rd & Amherst Dr",
+      "id": "duval-road",
+      "latitude": 30.4116431,
+      "longitude": -97.7221014,
+      "name": "Duval Road"
+    },
+    {
+      "address": "Spicewood Springs Rd & Old Spicewood Springs Rd",
+      "id": "spicewood-road",
+      "latitude": 30.3834784,
+      "longitude": -97.7715491,
+      "name": "Spicewood Springs"
+    },
+    {
+      "address": "Mesa Dr & Spicewood Springs Rd",
+      "id": "mesa-road",
+      "latitude": 30.3715813,
+      "longitude": -97.7572206,
+      "name": "Mesa Drive"
+    },
+    {
+      "address": "Far West Blvd & Mesa Dr",
+      "id": "farWest-road",
+      "latitude": 30.3596761,
+      "longitude": -97.7666401,
+      "name": "Far West"
+    },
+    {
+      "address": "Mesa Dr & Steck Ave",
+      "id": "steck-road",
+      "latitude": 30.3743849,
+      "longitude": -97.7554525,
+      "name": "Northwest Hills"
+    },
+    {
+      "address": "Dry Creek Dr & Mountainclimb Dr",
+      "id": "dryCreek-road",
+      "latitude": 30.3436686,
+      "longitude": -97.76513,
+      "name": "Dry Creek Drive"
+    },
+    {
+      "address": "Barton Hills Dr & Barton Skyway",
+      "id": "bartonHills-road",
+      "latitude": 30.2530076,
+      "longitude": -97.7851805,
+      "name": "Barton Hills"
+    },
+    {
+      "address": "Barton Skyway & S Lamar Blvd",
+      "id": "bluebonnet-road",
+      "latitude": 30.2436147,
+      "longitude": -97.782296,
+      "name": "Barton Skyway"
+    },
+    {
+      "address": "Menchaca Rd & Fort View Rd",
+      "id": "menchaca-road",
+      "latitude": 30.2310079,
+      "longitude": -97.7876337,
+      "name": "South Austin"
+    },
+    {
+      "address": "Longview Rd & Cameron Loop",
+      "id": "longview-road",
+      "latitude": 30.1953468,
+      "longitude": -97.8322976,
+      "name": "Longview Park area"
+    },
+    {
+      "address": "Convict Hill Rd & Beckett Rd",
+      "id": "convict-road",
+      "latitude": 30.2204893,
+      "longitude": -97.8578179,
+      "name": "Dick Nichols area"
+    },
+    {
+      "address": "Escarpment Blvd & La Crosse Ave",
+      "id": "escarpment-road",
+      "latitude": 30.1938812,
+      "longitude": -97.8848766,
+      "name": "Circle C"
+    },
+    {
+      "address": "Slaughter Ln & Escarpment Blvd",
+      "id": "slaughter-road",
+      "latitude": 30.2006955,
+      "longitude": -97.8782452,
+      "name": "Slaughter Creek area"
+    },
+    {
+      "address": "Davis Ln & Beckett Rd",
+      "id": "davis-road",
+      "latitude": 30.2079207,
+      "longitude": -97.8693459,
+      "name": "Davis Lane"
+    },
+    {
+      "address": "Montopolis Dr & Grove Blvd",
+      "id": "montopolis-road",
+      "latitude": 30.2201944,
+      "longitude": -97.7070178,
+      "name": "Montopolis"
+    },
+    {
+      "address": "Grove Blvd & Riverside Dr",
+      "id": "grove-road",
+      "latitude": 30.2269519,
+      "longitude": -97.7079214,
+      "name": "Grove Boulevard"
+    }
+  ],
+  "routes": [
+    {
+      "anchorIDs": [
+        "barton-road",
+        "lake-road",
+        "riverside-road"
+      ],
+      "area": "Central Austin",
+      "id": 0,
+      "name": "Lake & skyline",
+      "planningMinutes": 25,
+      "scenery": [
+        "water",
+        "greenery",
+        "city"
+      ],
+      "symbol": "water.waves"
+    },
+    {
+      "anchorIDs": [
+        "lakeshore-road",
+        "pleasant-road",
+        "riverside-road"
+      ],
+      "area": "East Austin",
+      "id": 1,
+      "name": "Riverside loop",
+      "planningMinutes": 25,
+      "scenery": [
+        "water",
+        "greenery",
+        "city"
+      ],
+      "symbol": "water.waves"
+    },
+    {
+      "anchorIDs": [
+        "lake-road",
+        "scenic-road",
+        "bonnell-road"
+      ],
+      "area": "West Austin",
+      "id": 2,
+      "name": "Hills & river",
+      "planningMinutes": 35,
+      "scenery": [
+        "water",
+        "hills",
+        "greenery"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "redbud-road",
+        "westlake-road",
+        "bee-caves-road"
+      ],
+      "area": "Westlake",
+      "id": 3,
+      "name": "Westlake wander",
+      "planningMinutes": 30,
+      "scenery": [
+        "water",
+        "hills",
+        "greenery"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "congress-road",
+        "capitol-road",
+        "lamar-road"
+      ],
+      "area": "Downtown",
+      "id": 4,
+      "name": "City & skyline",
+      "planningMinutes": 25,
+      "scenery": [
+        "city"
+      ],
+      "symbol": "building.2"
+    },
+    {
+      "anchorIDs": [
+        "sixth-road",
+        "chicon-road",
+        "holly-road"
+      ],
+      "area": "East Austin",
+      "id": 5,
+      "name": "East Austin loop",
+      "planningMinutes": 20,
+      "scenery": [
+        "city"
+      ],
+      "symbol": "building.2"
+    },
+    {
+      "anchorIDs": [
+        "riverside-road",
+        "lake-road",
+        "scenic-road",
+        "bonnell-road"
+      ],
+      "area": "Central & west",
+      "id": 6,
+      "name": "River, hills & skyline",
+      "planningMinutes": 45,
+      "scenery": [
+        "water",
+        "hills",
+        "greenery",
+        "city"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "congress-road",
+        "barton-road",
+        "redbud-road",
+        "westlake-road",
+        "bee-caves-road",
+        "capitol-road"
+      ],
+      "area": "Central & west",
+      "id": 7,
+      "name": "Austin highlights",
+      "planningMinutes": 55,
+      "scenery": [
+        "water",
+        "hills",
+        "greenery",
+        "city"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "lake-road",
+        "scenic-road",
+        "bonnell-road",
+        "bull-creek-road",
+        "city-park-road"
+      ],
+      "area": "West Austin",
+      "id": 8,
+      "name": "A little farther west",
+      "planningMinutes": 65,
+      "scenery": [
+        "water",
+        "hills",
+        "greenery"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "congress-road",
+        "riverside-road",
+        "redbud-road",
+        "city-park-road",
+        "bull-creek-road",
+        "bonnell-road",
+        "capitol-road"
+      ],
+      "area": "Across Austin",
+      "id": 9,
+      "name": "The long scenic way",
+      "planningMinutes": 80,
+      "scenery": [
+        "water",
+        "hills",
+        "greenery",
+        "city"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "riverside-road"
+      ],
+      "area": "Downtown",
+      "id": 10,
+      "name": "A moment by the river",
+      "planningMinutes": 12,
+      "scenery": [
+        "water",
+        "greenery",
+        "city"
+      ],
+      "symbol": "water.waves"
+    },
+    {
+      "anchorIDs": [
+        "capitol-road",
+        "lamar-road"
+      ],
+      "area": "Downtown",
+      "id": 11,
+      "name": "Around downtown",
+      "planningMinutes": 15,
+      "scenery": [
+        "city"
+      ],
+      "symbol": "building.2"
+    },
+    {
+      "anchorIDs": [
+        "shoal-road",
+        "northwest-road",
+        "hancock-road"
+      ],
+      "area": "Central Austin",
+      "id": 12,
+      "name": "Along Shoal Creek",
+      "planningMinutes": 30,
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "symbol": "leaf"
+    },
+    {
+      "anchorIDs": [
+        "hyde-road",
+        "shipe-road",
+        "northLoop-road"
+      ],
+      "area": "North central",
+      "id": 13,
+      "name": "Hyde Park ramble",
+      "planningMinutes": 30,
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "symbol": "leaf"
+    },
+    {
+      "anchorIDs": [
+        "mueller-road",
+        "berkman-road",
+        "zachScott-road"
+      ],
+      "area": "Mueller",
+      "id": 14,
+      "name": "Mueller lakeside",
+      "planningMinutes": 30,
+      "scenery": [
+        "water",
+        "greenery",
+        "city"
+      ],
+      "symbol": "water.waves"
+    },
+    {
+      "anchorIDs": [
+        "cherrywood-road",
+        "manor-road",
+        "zachScott-road"
+      ],
+      "area": "East Austin",
+      "id": 15,
+      "name": "Cherrywood shade",
+      "planningMinutes": 30,
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "symbol": "leaf"
+    },
+    {
+      "anchorIDs": [
+        "walnut-road",
+        "parkBend-road",
+        "gracy-road"
+      ],
+      "area": "North Austin",
+      "id": 16,
+      "name": "Walnut Creek wander",
+      "planningMinutes": 40,
+      "scenery": [
+        "greenery"
+      ],
+      "symbol": "leaf"
+    },
+    {
+      "anchorIDs": [
+        "balcones-road",
+        "gracy-road",
+        "duval-road"
+      ],
+      "area": "North Austin",
+      "id": 17,
+      "name": "Balcones & Gracy Farms",
+      "planningMinutes": 40,
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "symbol": "leaf"
+    },
+    {
+      "anchorIDs": [
+        "spicewood-road",
+        "bull-creek-road",
+        "mesa-road",
+        "farWest-road"
+      ],
+      "area": "Northwest Austin",
+      "id": 18,
+      "name": "Spicewood hills",
+      "planningMinutes": 50,
+      "scenery": [
+        "water",
+        "hills",
+        "greenery"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "farWest-road",
+        "steck-road",
+        "dryCreek-road"
+      ],
+      "area": "Northwest Austin",
+      "id": 19,
+      "name": "Northwest ridge",
+      "planningMinutes": 40,
+      "scenery": [
+        "hills",
+        "greenery"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "bartonHills-road",
+        "bluebonnet-road",
+        "barton-road"
+      ],
+      "area": "South central",
+      "id": 20,
+      "name": "Barton Hills meander",
+      "planningMinutes": 35,
+      "scenery": [
+        "hills",
+        "greenery",
+        "city"
+      ],
+      "symbol": "mountain.2"
+    },
+    {
+      "anchorIDs": [
+        "menchaca-road",
+        "longview-road",
+        "convict-road"
+      ],
+      "area": "South Austin",
+      "id": 21,
+      "name": "South Austin parks",
+      "planningMinutes": 45,
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "symbol": "leaf"
+    },
+    {
+      "anchorIDs": [
+        "escarpment-road",
+        "slaughter-road",
+        "davis-road"
+      ],
+      "area": "Southwest Austin",
+      "id": 22,
+      "name": "Circle C greenways",
+      "planningMinutes": 50,
+      "scenery": [
+        "greenery"
+      ],
+      "symbol": "leaf"
+    },
+    {
+      "anchorIDs": [
+        "montopolis-road",
+        "grove-road",
+        "pleasant-road",
+        "lakeshore-road"
+      ],
+      "area": "Southeast Austin",
+      "id": 23,
+      "name": "East riverbend",
+      "planningMinutes": 35,
+      "scenery": [
+        "water",
+        "greenery",
+        "city"
+      ],
+      "symbol": "water.waves"
+    }
+  ],
+  "stops": [
+    {
+      "address": "3825 Lake Austin Blvd",
+      "id": "mozarts",
+      "kinds": [
+        "coffee"
+      ],
+      "latitude": 30.2952664,
+      "longitude": -97.7843695,
+      "name": "Mozart’s Coffee Roasters",
+      "note": "Allow time to order. Check opening hours before stopping.",
+      "scenery": [
+        "water",
+        "greenery"
+      ],
+      "sourceURL": "https://mozartscoffee.com/pages/frequently-asked-questions"
+    },
+    {
+      "address": "221 W North Loop Blvd",
+      "id": "epoch-north",
+      "kinds": [
+        "coffee"
+      ],
+      "latitude": 30.3185533,
+      "longitude": -97.7245028,
+      "name": "Epoch Coffee — North Loop",
+      "note": "Allow time to order. Check opening hours before stopping.",
+      "scenery": [
+        "city"
+      ],
+      "sourceURL": "https://epochcoffee.com/"
+    },
+    {
+      "address": "2700 W Anderson Ln",
+      "id": "epoch-village",
+      "kinds": [
+        "coffee"
+      ],
+      "latitude": 30.359365,
+      "longitude": -97.7345818,
+      "name": "Epoch Coffee — The Village",
+      "note": "Allow time to order. Check opening hours before stopping.",
+      "scenery": [
+        "city"
+      ],
+      "sourceURL": "https://epochcoffee.com/"
+    },
+    {
+      "address": "3900 Far West Blvd",
+      "id": "epoch-west",
+      "kinds": [
+        "coffee"
+      ],
+      "latitude": 30.357282,
+      "longitude": -97.7606092,
+      "name": "Epoch Coffee — Far West",
+      "note": "Allow time to order. Check opening hours before stopping.",
+      "scenery": [
+        "city"
+      ],
+      "sourceURL": "https://epochcoffee.com/"
+    },
+    {
+      "address": "1400 E 38 1/2 St",
+      "id": "cherrywood-coffee",
+      "kinds": [
+        "coffee"
+      ],
+      "latitude": 30.2935588,
+      "longitude": -97.716035,
+      "name": "Cherrywood Coffeehouse",
+      "note": "Allow time to order. Check opening hours before stopping.",
+      "scenery": [
+        "city"
+      ],
+      "sourceURL": "https://cherrywoodcoffeehouse.com/contact/"
+    },
+    {
+      "address": "4204 Menchaca Rd",
+      "id": "radio",
+      "kinds": [
+        "coffee"
+      ],
+      "latitude": 30.231485,
+      "longitude": -97.7877013,
+      "name": "Radio Coffee & Beer",
+      "note": "Allow time to order. Check opening hours before stopping.",
+      "scenery": [
+        "city"
+      ],
+      "sourceURL": "https://radiocoffeeandbeer.com/contact-us"
+    },
+    {
+      "address": "3800 Mount Bonnell Rd",
+      "id": "bonnell",
+      "kinds": [
+        "view"
+      ],
+      "latitude": 30.3212161,
+      "longitude": -97.773359,
+      "name": "Mount Bonnell",
+      "note": "The overlook requires a walk and stairs. Allow for the return within your stop time.",
+      "scenery": [
+        "water",
+        "hills",
+        "greenery",
+        "city"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    },
+    {
+      "address": "1000 Barton Springs Rd",
+      "id": "butler",
+      "kinds": [
+        "view",
+        "walk"
+      ],
+      "latitude": 30.2606932,
+      "longitude": -97.7531762,
+      "name": "Butler Park",
+      "note": "Park in a designated space and continue on foot. Check access before stopping.",
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    },
+    {
+      "address": "1600 Scenic Dr",
+      "id": "walsh",
+      "kinds": [
+        "view"
+      ],
+      "latitude": 30.2973798,
+      "longitude": -97.7838565,
+      "name": "Walsh Boat Landing",
+      "note": "Park in a designated space and continue on foot. Check access before stopping.",
+      "scenery": [
+        "water",
+        "greenery"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/walsh-boat-landing"
+    },
+    {
+      "address": "6701 Lakewood Dr",
+      "id": "bull-creek",
+      "kinds": [
+        "view",
+        "walk"
+      ],
+      "latitude": 30.365922,
+      "longitude": -97.787253,
+      "name": "Bull Creek District Park",
+      "note": "Your stop time includes the walk back to the car. Check park access before stopping.",
+      "scenery": [
+        "water",
+        "hills",
+        "greenery"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    },
+    {
+      "address": "3805 W 35th St",
+      "id": "mayfield",
+      "kinds": [
+        "walk"
+      ],
+      "latitude": 30.312948,
+      "longitude": -97.771584,
+      "name": "Mayfield Park",
+      "note": "Your stop time includes the walk back to the car. Check park access before stopping.",
+      "scenery": [
+        "greenery"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    },
+    {
+      "address": "1100 Kingsbury St",
+      "id": "pease",
+      "kinds": [
+        "walk"
+      ],
+      "latitude": 30.2814332,
+      "longitude": -97.7512729,
+      "name": "Pease Park",
+      "note": "Your stop time includes the walk back to the car. Check park access before stopping.",
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    },
+    {
+      "address": "12138 N Lamar Blvd",
+      "id": "walnut-creek",
+      "kinds": [
+        "walk"
+      ],
+      "latitude": 30.3999301,
+      "longitude": -97.6836142,
+      "name": "Walnut Creek Metropolitan Park",
+      "note": "Your stop time includes the walk back to the car. Check park access before stopping.",
+      "scenery": [
+        "greenery"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    },
+    {
+      "address": "8011 Beckett Rd",
+      "id": "dick-nichols",
+      "kinds": [
+        "walk"
+      ],
+      "latitude": 30.2133723,
+      "longitude": -97.8626515,
+      "name": "Dick Nichols District Park",
+      "note": "Your stop time includes the walk back to the car. Check park access before stopping.",
+      "scenery": [
+        "greenery"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    },
+    {
+      "address": "5201 Berkman Dr",
+      "id": "bartholomew",
+      "kinds": [
+        "walk"
+      ],
+      "latitude": 30.3048596,
+      "longitude": -97.697632,
+      "name": "Bartholomew District Park",
+      "note": "Your stop time includes the walk back to the car. Check park access before stopping.",
+      "scenery": [
+        "greenery",
+        "city"
+      ],
+      "sourceURL": "https://www.austintexas.gov/parks/locations/park-directory"
+    }
+  ],
+  "version": 1
+}

@@ -1,159 +1,65 @@
 import MapKit
 
-struct RouteAnchor: Identifiable {
+struct RouteAnchor: Decodable, Hashable, Identifiable {
     let id: String
     let name: String
     let address: String
+    let latitude: Double
+    let longitude: Double
     var note: String? = nil
     var isStop = false
+    var scenery: Set<Scenery> = []
 
-    var searchQuery: String {
-        isStop ? "\(name), \(address), Austin, Texas" : "\(address), Austin, Texas"
-    }
+    private enum CodingKeys: String, CodingKey { case id, name, address, latitude, longitude }
+    var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: latitude, longitude: longitude) }
+    var searchQuery: String { "\(address), Austin, Texas" }
 }
 
-/// Curated public corridors. Planning hints only choose a bounded shortlist;
-/// live driving estimates decide whether a round trip fits the budget.
-enum AustinLoop: Int, CaseIterable, Identifiable {
-    case parks, riverside, hills, lake, skyline, eastside
-    case riverAndHills, austinHighlights, hillCountry, grandAustin, riverfront, cityCenter
-    var id: Int { rawValue }
+struct AustinLoop: Decodable, Hashable, Identifiable {
+    let id: Int
+    let name: String
+    let area: String
+    let scenery: Set<Scenery>
+    let planningMinutes: Double
+    let symbol: String
+    let anchorIDs: [String]
+    var rawValue: Int { id }
+    static var allCases: [Self] { AustinCatalog.shared.routes }
+    var anchors: [RouteAnchor] {
+        anchorIDs.compactMap { id in AustinCatalog.shared.anchors.first { $0.id == id } }
+    }
 
+    func stopPlacements(for request: RideRequest) -> [StopPlacement] {
+        NearbyStops.placements(for: request, loop: self, points: [request.startingPlace.coordinate] + anchors.map(\.coordinate) + [request.startingPlace.coordinate])
+    }
+
+    /// Full ordered catalog, consumed in bounded batches by the preview model.
     static func candidates(for request: RideRequest) -> [Self] {
         guard !request.scenery.isEmpty else { return [] }
-        let matching = allCases.filter { request.scenery.isSubset(of: $0.scenery(options: request.options)) }
-        let ordered = matching.sorted {
-            let lhs = abs($0.planningMinutes + request.options.stopMinutes - request.duration.rawValue)
-            let rhs = abs($1.planningMinutes + request.options.stopMinutes - request.duration.rawValue)
-            return lhs == rhs ? $0.rawValue < $1.rawValue : lhs < rhs
+        let matching = allCases.filter { loop in
+            request.options.pace == .stop ? !loop.stopPlacements(for: request).isEmpty : request.scenery.isSubset(of: loop.scenery)
         }
-        var choices = Array(ordered.prefix(4))
-        // Always check a compact matching alternative before declaring no fit.
-        if let shortest = matching.min(by: { $0.planningMinutes < $1.planningMinutes }), !choices.contains(shortest) {
-            choices.append(shortest)
+        func approach(_ loop: Self) -> Double {
+            (loop.anchors.map { NearbyStops.distance(request.startingPlace.coordinate, $0.coordinate) }.min() ?? 0) / 1_000
         }
-        return choices
-    }
-
-    var scenery: Set<Scenery> {
-        switch self {
-        case .parks, .riverside, .riverfront: [.water, .greenery, .city]
-        case .hills, .lake, .hillCountry: [.water, .hills, .greenery]
-        case .skyline, .eastside, .cityCenter: [.city]
-        case .riverAndHills, .austinHighlights, .grandAustin: Set(Scenery.allCases)
+        func score(_ loop: Self) -> Double {
+            abs(loop.planningMinutes + Double(request.options.stopMinutes - request.duration.rawValue)) + approach(loop) * 1.5
         }
-    }
-
-    func scenery(options: RideOptions) -> Set<Scenery> {
-        guard options.pace == .stop else { return scenery }
-        switch options.stopKind {
-        case .coffee: return scenery.union([.water])
-        case .view: return scenery.union([.water, .hills, .greenery])
-        case .walk: return scenery.union([.greenery, .city])
+        var ordered = matching.sorted { score($0) == score($1) ? $0.id < $1.id : score($0) < score($1) }
+        // Include a compact, reachable alternative in the first five checks.
+        if let compact = matching.min(by: {
+            let lhs = $0.planningMinutes + approach($0) * 2
+            let rhs = $1.planningMinutes + approach($1) * 2
+            return lhs == rhs ? $0.id < $1.id : lhs < rhs
+        }), let index = ordered.firstIndex(of: compact), index >= 5 {
+            ordered.remove(at: index); ordered.insert(compact, at: 4)
         }
-    }
-
-    var name: String {
-        switch self {
-        case .parks: "Lake & skyline"
-        case .riverside: "Riverside loop"
-        case .hills: "Hills & river"
-        case .lake: "Westlake wander"
-        case .skyline: "City & skyline"
-        case .eastside: "East Austin loop"
-        case .riverAndHills: "River, hills & skyline"
-        case .austinHighlights: "Austin highlights"
-        case .hillCountry: "A little farther west"
-        case .grandAustin: "The long scenic way"
-        case .riverfront: "A moment by the river"
-        case .cityCenter: "Around downtown"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .hills, .lake, .hillCountry: "mountain.2"
-        case .skyline, .eastside, .cityCenter: "building.2"
-        case .grandAustin, .austinHighlights: "leaf"
-        default: "water.waves"
-        }
-    }
-
-    /// Approximate city-center values for shortlisting, never displayed as ETAs.
-    private var planningMinutes: Int {
-        switch self {
-        case .parks: 25
-        case .riverside: 25
-        case .hills: 35
-        case .lake: 30
-        case .skyline: 25
-        case .eastside: 20
-        case .riverAndHills: 45
-        case .austinHighlights: 55
-        case .hillCountry: 65
-        case .grandAustin: 80
-        case .riverfront: 12
-        case .cityCenter: 15
-        }
-    }
-
-    var anchors: [RouteAnchor] {
-        switch self {
-        case .parks: [.bartonSprings, .lakeAustin, .riversideRoad]
-        case .riverside: [.lakeshore, .pleasantValley, .riversideRoad]
-        case .hills: [.lakeAustin, .scenicDrive, .bonnellRoad]
-        case .lake: [.redbudRoad, .westlakeDrive, .beeCaves]
-        case .skyline: [.southCongress, .capitol, .lamar]
-        case .eastside: [.eastSixth, .chicon, .holly]
-        case .riverAndHills: [.riversideRoad, .lakeAustin, .scenicDrive, .bonnellRoad]
-        case .austinHighlights: [.southCongress, .bartonSprings, .redbudRoad, .westlakeDrive, .beeCaves, .capitol]
-        case .hillCountry: [.lakeAustin, .scenicDrive, .bonnellRoad, .bullCreekRoad, .cityParkRoad]
-        case .grandAustin: [.southCongress, .riversideRoad, .redbudRoad, .cityParkRoad, .bullCreekRoad, .bonnellRoad, .capitol]
-        case .riverfront: [.riversideRoad]
-        case .cityCenter: [.capitol, .lamar]
-        }
-    }
-
-    func anchors(options: RideOptions) -> [RouteAnchor] {
-        guard options.pace == .stop else { return anchors }
-        let stop: RouteAnchor
-        switch options.stopKind {
-        case .coffee: stop = .coffee
-        case .view: stop = .mountBonnell
-        case .walk: stop = .butlerPark
-        }
-        return anchors + [stop]
+        return ordered
     }
 
     static func supports(_ coordinate: CLLocationCoordinate2D) -> Bool {
-        guard CLLocationCoordinate2DIsValid(coordinate) else { return false }
-        let center = CLLocation(latitude: StartingPlace.austin.latitude, longitude: StartingPlace.austin.longitude)
-        return center.distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)) <= 40_000
+        CLLocationCoordinate2DIsValid(coordinate) && NearbyStops.distance(StartingPlace.austin.coordinate, coordinate) <= 40_000
     }
-}
-
-private extension RouteAnchor {
-    static let bartonSprings = Self(id: "barton-road", name: "Barton Springs Road", address: "Barton Springs Road & Azie Morton Road")
-    static let lakeAustin = Self(id: "lake-road", name: "Lake Austin Boulevard", address: "Lake Austin Boulevard & Exposition Boulevard")
-    static let riversideRoad = Self(id: "riverside-road", name: "Riverside Drive", address: "West Riverside Drive & South First Street")
-    static let lakeshore = Self(id: "lakeshore-road", name: "Lakeshore Boulevard", address: "Lakeshore Boulevard & South Pleasant Valley Road")
-    static let pleasantValley = Self(id: "pleasant-road", name: "Pleasant Valley Road", address: "South Pleasant Valley Road & East Cesar Chavez Street")
-    static let scenicDrive = Self(id: "scenic-road", name: "Scenic Drive", address: "Scenic Drive")
-    static let bonnellRoad = Self(id: "bonnell-road", name: "Mount Bonnell Road", address: "Mount Bonnell Road & Mount Bonnell Drive")
-    static let redbudRoad = Self(id: "redbud-road", name: "Redbud Trail", address: "Redbud Trail & Lake Austin Boulevard")
-    static let westlakeDrive = Self(id: "westlake-road", name: "Westlake Drive", address: "Westlake Drive & Redbud Trail")
-    static let beeCaves = Self(id: "bee-caves-road", name: "Bee Caves Road", address: "Bee Caves Road & Westlake Drive")
-    static let southCongress = Self(id: "congress-road", name: "South Congress", address: "South Congress Avenue & West Monroe Street")
-    static let capitol = Self(id: "capitol-road", name: "Capitol district", address: "Congress Ave & E 11th St")
-    static let lamar = Self(id: "lamar-road", name: "Lamar Boulevard", address: "W 6th St & N Lamar Blvd")
-    static let eastSixth = Self(id: "sixth-road", name: "East Sixth Street", address: "East 6th Street & Comal Street")
-    static let chicon = Self(id: "chicon-road", name: "East Austin", address: "Chicon Street & East Cesar Chavez Street")
-    static let holly = Self(id: "holly-road", name: "Holly neighborhood", address: "Holly Street & Chicon Street")
-    static let bullCreekRoad = Self(id: "bull-creek-road", name: "Bull Creek area", address: "Lakewood Drive")
-    static let cityParkRoad = Self(id: "city-park-road", name: "City Park Road", address: "City Park Rd & Pearce Rd")
-    static let coffee = Self(id: "coffee-stop", name: "Mozart’s Coffee Roasters", address: "3825 Lake Austin Blvd", note: "Check opening hours before stopping.", isStop: true)
-    static let mountBonnell = Self(id: "view-stop", name: "Mount Bonnell", address: "3800 Mount Bonnell Rd", note: "The overlook is reached on foot. Check access before stopping.", isStop: true)
-    static let butlerPark = Self(id: "walk-stop", name: "Butler Park", address: "1000 Barton Springs Rd", note: "Check park access before stopping.", isStop: true)
 }
 
 struct RouteWaypoint: Identifiable {
@@ -163,6 +69,7 @@ struct RouteWaypoint: Identifiable {
     let coordinate: CLLocationCoordinate2D
     var note: String? = nil
     var isStop = false
+    var scenery: Set<Scenery> = []
 }
 
 struct RouteLeg: Identifiable {
@@ -179,6 +86,7 @@ struct ScenicRoute: Identifiable {
     let waypoints: [RouteWaypoint]
     let legs: [RouteLeg]
     var options = RideOptions()
+    var stopSelection: StopSelectionMethod? = nil
 
     var highlights: [RouteWaypoint] { Array(waypoints.dropFirst().dropLast()) }
     var distance: CLLocationDistance { legs.reduce(0) { $0 + $1.distance } }
@@ -191,8 +99,12 @@ struct ScenicRoute: Identifiable {
         stopMinutes > 0 ? "\(drivingMinutes) min drive + \(stopMinutes) min stop" : "\(drivingMinutes) min driving"
     }
 
+    var stop: RouteWaypoint? { highlights.first(where: \.isStop) }
+    var scenery: Set<Scenery> { highlights.filter(\.isStop).reduce(loop.scenery) { $0.union($1.scenery) } }
     func fits(_ request: RideRequest) -> Bool {
-        totalTime <= request.budget && request.scenery.isSubset(of: loop.scenery(options: options))
+        options == request.options && totalTime.isFinite && totalTime <= request.budget
+            && request.scenery.isSubset(of: scenery)
+            && highlights.filter(\.isStop).count == (options.pace == .stop ? 1 : 0)
     }
     var distanceLabel: String {
         "\((distance / 1_609.344).formatted(.number.precision(.fractionLength(1)))) mi"
@@ -213,4 +125,6 @@ enum RoutePlanningError: Error, Equatable {
     case unavailable
     case invalidPreferences
     case stopExceedsBudget
+    case noMatchingRoutes
+    case noNearbyStop
 }

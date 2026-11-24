@@ -1,34 +1,35 @@
 #if DEBUG
 import MapKit
 
-/// Deterministic UI-test data. Release builds always use live MapKit directions.
+/// Deterministic states for UI checks; never included in Release builds.
 @MainActor
 final class PreviewTestRoutePlanner: RoutePlanning {
     private let scenario: String
     private var attempts = 0
-
     init(scenario: String) { self.scenario = scenario }
 
     func plan(_ request: RideRequest, loop: AustinLoop) async throws -> ScenicRoute {
         attempts += 1
-        try await Task.sleep(for: scenario == "loading" ? .seconds(30) : .milliseconds(100))
-        if scenario == "retry", attempts <= AustinLoop.candidates(for: request).count { throw RoutePlanningError.unavailable }
+        try await Task.sleep(for: scenario == "loading" || (scenario == "loadingMore" && attempts > RoutePreviewModel.batchSize) ? .seconds(30) : .milliseconds(100))
+        if scenario == "retry", attempts <= RoutePreviewModel.batchSize { throw RoutePlanningError.unavailable }
         if scenario == "partial", attempts == 1 { throw RoutePlanningError.unavailable }
+        if scenario == "moreRetry", attempts == RoutePreviewModel.batchSize + 1 { throw RoutePlanningError.unavailable }
         let start = request.startingPlace
         var points = [RouteWaypoint(id: "start", name: start.name, detail: start.detail, coordinate: start.coordinate)]
-        for (index, anchor) in loop.anchors(options: request.options).enumerated() {
-            let coordinate = CLLocationCoordinate2D(latitude: 30.28 + Double(index) * 0.006, longitude: -97.77 - Double(index % 3) * 0.008)
-            points.append(RouteWaypoint(id: anchor.id, name: anchor.name, detail: anchor.address, coordinate: coordinate, note: anchor.note, isStop: anchor.isStop))
-        }
+        points += loop.anchors.map { RouteWaypoint(id: $0.id, name: $0.name, detail: $0.address, coordinate: $0.coordinate) }
         points.append(RouteWaypoint(id: "return", name: start.name, detail: start.detail, coordinate: start.coordinate))
-        let fixtureMinutes = [21, 24, 34, 27, 22, 18, 44, 53, 64, 78, 12, 14]
-        let driving = TimeInterval(scenario == "overBudget" ? request.duration.rawValue + 5 : fixtureMinutes[loop.rawValue]) * 60
+        if request.options.pace == .stop {
+            guard let chosen = loop.stopPlacements(for: request).first else { throw RoutePlanningError.noNearbyStop }
+            let stop = chosen.stop.anchor
+            points.insert(RouteWaypoint(id: stop.id, name: stop.name, detail: stop.address, coordinate: stop.coordinate, note: stop.note, isStop: true, scenery: stop.scenery), at: chosen.index)
+        }
+        let minutes = scenario == "overBudget" ? request.duration.rawValue + 5 : 20 + loop.id % 9
         let legCount = points.count - 1
         let legs = zip(points, points.dropFirst()).map { source, destination in
             let coordinates = [source.coordinate, destination.coordinate]
-            return RouteLeg(polyline: MKPolyline(coordinates: coordinates, count: coordinates.count), distance: 1_609.344, expectedTravelTime: driving / Double(legCount))
+            return RouteLeg(polyline: MKPolyline(coordinates: coordinates, count: 2), distance: 1_609.344, expectedTravelTime: Double(minutes * 60) / Double(legCount))
         }
-        return ScenicRoute(loop: loop, waypoints: points, legs: legs, options: request.options)
+        return ScenicRoute(loop: loop, waypoints: points, legs: legs, options: request.options, stopSelection: request.options.pace == .stop ? (scenario == "aiReady" ? .onDeviceAI : .nearby(.unavailable)) : nil)
     }
 }
 #endif

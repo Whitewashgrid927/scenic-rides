@@ -15,22 +15,53 @@ protocol RoutePlanning {
 @MainActor
 final class MapKitRoutePlanner: RoutePlanning {
     private let maps: any RouteMapServing
+    private let stopRanker: any StopRanking
+    private var rankingRequestID: UUID?
+    private var rankedStops: [AustinLoop: RankedStops] = [:]
 
-    init(maps: any RouteMapServing = AppleRouteMapService()) {
-        self.maps = maps
+    init(maps: any RouteMapServing = AppleRouteMapService(), stopRanker: any StopRanking = OnDeviceStopRanker()) {
+        self.maps = maps; self.stopRanker = stopRanker
     }
 
     func plan(_ request: RideRequest, loop: AustinLoop) async throws -> ScenicRoute {
         guard AustinLoop.supports(request.startingPlace.coordinate) else {
             throw RoutePlanningError.outsideAustin
         }
+        if rankingRequestID != request.id { rankedStops = [:]; rankingRequestID = request.id }
         let start = request.startingPlace
+        var stopSelection: StopSelectionMethod?
         var waypoints = [RouteWaypoint(id: "start", name: start.name, detail: start.detail, coordinate: start.coordinate)]
-        for anchor in loop.anchors(options: request.options) {
+        for anchor in loop.anchors {
             try Task.checkCancellation()
             waypoints.append(try await maps.resolve(anchor))
         }
         waypoints.append(RouteWaypoint(id: "return", name: start.name, detail: start.detail, coordinate: start.coordinate))
+        if request.options.pace == .stop {
+            let nearby = NearbyStops.placements(for: request, loop: loop, points: waypoints.map(\.coordinate))
+            guard !nearby.isEmpty else { throw RoutePlanningError.noNearbyStop }
+            let ranked: RankedStops
+            if rankingRequestID == request.id, let cached = rankedStops[loop] { ranked = cached }
+            else {
+                ranked = try await stopRanker.rank(nearby, request: request, loop: loop)
+                try Task.checkCancellation()
+                if ranked.method == .onDeviceAI, rankingRequestID == request.id { rankedStops[loop] = ranked }
+            }
+            stopSelection = ranked.method
+            var chosen: (Int, RouteWaypoint)?
+            // Bound place-resolution work; never substitute a distant stop or another kind.
+            for placement in ranked.placements.prefix(2) {
+                do {
+                    let point = try await maps.resolve(placement.stop.anchor)
+                    try Task.checkCancellation()
+                    chosen = (placement.index, point)
+                    break
+                } catch {
+                    try Task.checkCancellation()
+                }
+            }
+            guard let (index, stop) = chosen else { throw RoutePlanningError.noNearbyStop }
+            waypoints.insert(stop, at: index)
+        }
 
         var legs: [RouteLeg] = []
         var departure = request.departure
@@ -58,7 +89,7 @@ final class MapKitRoutePlanner: RoutePlanning {
             }
         }
         // Publish only a complete round trip; a failed return leg must not become a partial route.
-        return ScenicRoute(loop: loop, waypoints: waypoints, legs: legs, options: request.options)
+        return ScenicRoute(loop: loop, waypoints: waypoints, legs: legs, options: request.options, stopSelection: stopSelection)
     }
 }
 
@@ -81,7 +112,7 @@ final class AppleRouteMapService: RouteMapServing {
             Task { await cancellation.cancel() }
         }
         try Task.checkCancellation()
-        guard let item = response.mapItems.first(where: { AustinLoop.supports($0.location.coordinate) }) else {
+        guard let item = response.mapItems.first(where: { AustinLoop.supports($0.location.coordinate) && NearbyStops.distance($0.location.coordinate, anchor.coordinate) <= (anchor.isStop ? 350 : 1_500) }) else {
             throw RoutePlanningError.unavailable
         }
         let waypoint = RouteWaypoint(
@@ -90,7 +121,8 @@ final class AppleRouteMapService: RouteMapServing {
             detail: item.addressRepresentations?.fullAddress(includingRegion: false, singleLine: true) ?? anchor.address,
             coordinate: item.location.coordinate,
             note: anchor.note,
-            isStop: anchor.isStop
+            isStop: anchor.isStop,
+            scenery: anchor.scenery
         )
         resolvedPlaces[anchor.id] = waypoint
         return waypoint
@@ -141,64 +173,74 @@ private final class MapRequestCancellation {
 @MainActor
 @Observable
 final class RoutePreviewModel {
-    enum State {
-        case ready(ScenicRoute)
-        case failed
-    }
-
+    enum State { case ready(ScenicRoute), failed }
+    static let batchSize = 5
     private(set) var states: [AustinLoop: State] = [:]
+    private(set) var routes: [ScenicRoute] = []
     private(set) var isLoading = true
-    private(set) var checkedCount = 0
-    private(set) var candidateCount = 0
+    private(set) var batchCheckedCount = 0
+    private(set) var batchCount = 0
+    private(set) var batchMessage: String?
     private(set) var failure: RoutePlanningError?
+    private var candidates: [AustinLoop] = []
     private let planner: any RoutePlanning
     private var generation = UUID()
     private var request: RideRequest?
 
     init(planner: any RoutePlanning = MapKitRoutePlanner()) { self.planner = planner }
+    var checkedCount: Int { states.count }
+    var candidateCount: Int { candidates.count }
+    var hasFailures: Bool { states.values.contains { if case .failed = $0 { true } else { false } } }
+    var canLoadMore: Bool { !unseenMatches.isEmpty || !unattempted.isEmpty }
+    var shortestMinutes: Int? { completedRoutes.map(\.minutes).min() }
+    private var unattempted: [AustinLoop] { candidates.filter { states[$0] == nil } }
+    private var completedRoutes: [ScenicRoute] { states.values.compactMap { if case let .ready(route) = $0 { route } else { nil } } }
+    private var unseenMatches: [ScenicRoute] {
+        guard let request else { return [] }
+        return completedRoutes.filter { route in route.fits(request) && !routes.contains { $0.loop == route.loop } }
+    }
 
     func route(for loop: AustinLoop) -> ScenicRoute? {
         if case let .ready(route) = states[loop] { return route }
         return nil
     }
 
-    private var completedRoutes: [ScenicRoute] {
-        states.values.compactMap { if case let .ready(route) = $0 { route } else { nil } }
-    }
-
-    var routes: [ScenicRoute] {
-        guard let request else { return [] }
-        // Fill the available time as closely as possible, without exceeding it.
-        return Array(completedRoutes.filter { $0.fits(request) }.sorted {
-            if $0.totalTime != $1.totalTime { return $0.totalTime > $1.totalTime }
-            if $0.distance != $1.distance { return $0.distance < $1.distance }
-            return $0.loop.rawValue < $1.loop.rawValue
-        }.prefix(3))
-    }
-
-    var shortestMinutes: Int? { completedRoutes.map(\.minutes).min() }
-    var hasFailures: Bool { states.values.contains { if case .failed = $0 { true } else { false } } }
-
     func loadChoices(_ request: RideRequest, loops: [AustinLoop]? = nil) async {
-        let token = UUID()
-        generation = token
-        if self.request?.id != request.id {
-            states = [:]
+        if self.request?.id == request.id {
+            guard !isLoading else { return }
+            let failed = candidates.filter { if case .failed = states[$0] { true } else { false } }
+            await runBatch(Array(failed.prefix(Self.batchSize)))
+            return
         }
+        generation = UUID()
         self.request = request
-        failure = nil
-        isLoading = true
-        defer { if generation == token { isLoading = false } }
-        let choices = loops ?? AustinLoop.candidates(for: request)
-        candidateCount = choices.count
-        checkedCount = choices.filter { route(for: $0) != nil }.count
+        states = [:]; routes = []; candidates = []; batchMessage = nil; failure = nil
+        batchCount = 0; batchCheckedCount = 0; isLoading = false
         guard !request.scenery.isEmpty else { failure = .invalidPreferences; return }
         guard request.options.stopTime < request.budget else { failure = .stopExceedsBudget; return }
         guard AustinLoop.supports(request.startingPlace.coordinate) else { failure = .outsideAustin; return }
+        // Stable order also makes retries and pagination reproducible.
+        var seen = Set<AustinLoop>()
+        candidates = (loops ?? AustinLoop.candidates(for: request)).filter { seen.insert($0).inserted }
+        guard !candidates.isEmpty else { failure = .noMatchingRoutes; return }
+        await runBatch(Array(candidates.prefix(Self.batchSize)))
+    }
 
-        // Bound and sequence network work. Retry only failed choices, retaining
-        // complete routes (including over-budget results) for this request.
-        for loop in choices where route(for: loop) == nil {
+    func loadMore() async {
+        guard !isLoading, request != nil, canLoadMore else { return }
+        // Reveal cached matches before spending another batch of MapKit requests.
+        let next = unseenMatches.count >= 3 ? [] : Array(unattempted.prefix(Self.batchSize))
+        await runBatch(next)
+    }
+
+    private func runBatch(_ choices: [AustinLoop]) async {
+        guard let request else { return }
+        let token = UUID(); generation = token
+        isLoading = true; batchMessage = nil; failure = nil
+        batchCount = choices.count; batchCheckedCount = 0
+        let hadRoutes = !routes.isEmpty
+        defer { if generation == token { isLoading = false } }
+        for loop in choices {
             guard !Task.isCancelled, generation == token else { return }
             do {
                 let route = try await planner.plan(request, loop: loop)
@@ -209,9 +251,32 @@ final class RoutePreviewModel {
                 guard !Task.isCancelled, generation == token else { return }
                 states[loop] = .failed
             }
-            checkedCount += 1
+            batchCheckedCount += 1
         }
         guard !Task.isCancelled, generation == token else { return }
+        let previousCount = routes.count
+        publishMatches(request)
+        let added = routes.count - previousCount
+        if hadRoutes {
+            batchMessage = added > 0 ? "\(added) more \(added == 1 ? "route" : "routes") added." : "No new routes fit this budget."
+        }
         if completedRoutes.isEmpty { failure = .unavailable }
+    }
+
+    private func publishMatches(_ request: RideRequest) {
+        var remaining = unseenMatches
+        for _ in 0..<3 {
+            // Prefer a close time fit, with a penalty for reusing the same scenic waypoints.
+            func score(_ route: ScenicRoute) -> Double {
+                let anchors = Set(route.loop.anchorIDs)
+                let overlap = routes.map { existing in
+                    Double(anchors.intersection(existing.loop.anchorIDs).count) / Double(max(anchors.count, existing.loop.anchorIDs.count))
+                }.max() ?? 0
+                return (request.budget - route.totalTime) / 60 + overlap * 20
+            }
+            remaining.sort { score($0) == score($1) ? $0.loop.id < $1.loop.id : score($0) < score($1) }
+            guard !remaining.isEmpty else { break }
+            routes.append(remaining.removeFirst())
+        }
     }
 }

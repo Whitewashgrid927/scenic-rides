@@ -9,6 +9,7 @@ struct RoutePreviewScreen: View {
     @State private var selection: AustinLoop?
     @State private var camera: MapCameraPosition = .region(StartingPlace.austinMapRegion)
     @State private var loadID = UUID()
+    @State private var loadingMore = false
     @State private var detailRoute: ScenicRoute?
     let request: RideRequest
 
@@ -41,7 +42,9 @@ struct RoutePreviewScreen: View {
                         .accessibilityIdentifier("fitRoute")
                 }
             }
-            .task(id: loadID) { await model.loadChoices(request) }
+            .task(id: loadID) {
+                if loadingMore { await model.loadMore() } else { await model.loadChoices(request) }
+            }
             .onChange(of: model.isLoading) { _, loading in
                 if !loading {
                     if !model.routes.contains(where: { $0.loop == selection }) { selection = model.routes.first?.loop }
@@ -115,22 +118,14 @@ struct RoutePreviewScreen: View {
 
             if showingRoutes {
                 routeCards(width: width)
-                HStack(spacing: 0) {
-                    ForEach(Array(model.routes.enumerated()), id: \.element.loop) { index, route in
-                        Button { choose(route.loop) } label: {
-                            Circle().fill(selectedRoute?.loop == route.loop ? .blue : Color.secondary.opacity(0.5))
-                                .frame(width: 7, height: 7).frame(width: 44, height: 44).contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Route \(index + 1) of \(model.routes.count), \(route.loop.name)")
-                        .accessibilityAddTraits(selectedRoute?.loop == route.loop ? .isSelected : [])
-                        .accessibilityIdentifier("routePage-\(index)")
-                    }
+                routeNavigation.padding(.horizontal, 24)
+                if let message = model.batchMessage {
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                        .padding(.horizontal, 24).accessibilityIdentifier("moreRoutesMessage")
                 }
-                .frame(maxWidth: .infinity)
                 VStack(spacing: 12) {
                     if model.hasFailures {
-                        Button(model.isLoading ? "Checking alternatives…" : "Some routes couldn’t load. Retry") { loadID = UUID() }
+                        Button(model.isLoading ? "Checking alternatives…" : "Some routes couldn’t load. Retry") { reload() }
                             .font(.caption).disabled(model.isLoading)
                             .accessibilityIdentifier("retryRoute")
                     }
@@ -149,7 +144,7 @@ struct RoutePreviewScreen: View {
                 VStack(spacing: 12) {
                     ProgressView()
                     Text("Checking scenery, stops and the way back…").font(.subheadline)
-                    Text("\(model.checkedCount) of \(model.candidateCount) routes checked")
+                    Text("\(model.batchCheckedCount) of \(model.batchCount) routes checked")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity).padding(24)
@@ -170,7 +165,7 @@ struct RoutePreviewScreen: View {
                             HStack {
                                 Image(systemName: route.loop.symbol).font(.title3).foregroundStyle(.blue)
                                 Spacer()
-                                Text(index == 0 ? "Best fit" : "Another way").font(.caption.weight(.medium))
+                                Text(route.loop.area).font(.caption.weight(.medium))
                                     .foregroundStyle(.secondary)
                             }
                             Text(route.loop.name).font(.title3.bold()).fixedSize(horizontal: false, vertical: true)
@@ -180,6 +175,16 @@ struct RoutePreviewScreen: View {
                             Text("\(route.breakdown) · \(route.distanceLabel)")
                                 .font(.caption).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
+                            if let stop = route.stop {
+                                Label(stop.name, systemImage: request.options.stopKind.symbol)
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            if let method = route.stopSelection {
+                                Text(method.title).font(.caption2).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityIdentifier("stopSelectionMethod-\(route.loop.id)")
+                            }
                             Text(request.sceneryLabel)
                                 .font(.caption.weight(.medium)).foregroundStyle(.blue)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -217,11 +222,12 @@ struct RoutePreviewScreen: View {
             Text(emptyMessage).font(.subheadline).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("routeEmptyMessage")
+            if model.canLoadMore { moreRoutesButton }
             Button("Adjust my ride") { dismiss() }
                 .buttonStyle(.glassProminent).buttonBorderShape(.capsule).controlSize(.large)
                 .accessibilityIdentifier("adjustRide")
             if model.failure == .unavailable || model.hasFailures {
-                Button("Try again") { loadID = UUID() }
+                Button("Try again") { reload() }
                     .buttonStyle(.glass).buttonBorderShape(.capsule)
                     .accessibilityIdentifier("retryRoute")
             }
@@ -234,7 +240,8 @@ struct RoutePreviewScreen: View {
         case .invalidPreferences: "Choose some scenery"
         case .stopExceedsBudget: "Leave some time for the drive"
         case .unavailable: "Routes couldn’t load"
-        case nil: "Let’s give this ride more time"
+        case .noMatchingRoutes, .noNearbyStop: "Try another combination"
+        case nil: model.canLoadMore ? "Let’s look a little farther" : "Let’s give this ride more time"
         }
     }
 
@@ -244,14 +251,64 @@ struct RoutePreviewScreen: View {
         case .invalidPreferences: "Select at least one kind of scenery to find a ride."
         case .stopExceedsBudget: "Your \(request.options.stopMinutes)-minute stop uses the whole budget. Shorten the stop or allow more time."
         case .unavailable: "Check your connection and try again. Your choices are still here."
+        case .noMatchingRoutes, .noNearbyStop:
+            request.options.pace == .stop
+                ? "No catalog route has those scenery choices and a nearby stop of that kind. Try different scenery or Just drive."
+                : "No catalog route covers those scenery choices. Try a different combination."
         case nil:
             if let minutes = model.shortestMinutes {
-                "None of the checked routes fits your \(request.duration.rawValue)-minute budget and scenery choices. The shortest checked takes about \(minutes) minutes including stops. Try more time, fewer scenery choices or a shorter stop.\(model.hasFailures ? " Some alternatives couldn’t load." : "")"
+                "None of the checked routes fits your \(request.duration.rawValue)-minute budget and scenery choices. The shortest checked takes about \(minutes) minutes including stops. \(model.canLoadMore ? "Check more routes, or adjust your ride." : "Try more time, fewer scenery choices or a shorter stop.")\(model.hasFailures ? " Some alternatives couldn’t load." : "")"
             } else {
                 "Try another scenery combination or starting point. Your choices are still here."
             }
         }
     }
+
+    private var selectedIndex: Int { model.routes.firstIndex { $0.loop == selectedRoute?.loop } ?? 0 }
+
+    private var routeNavigation: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { pageControls; Spacer(minLength: 8); moreRoutesButton }
+            VStack(spacing: 12) { pageControls; moreRoutesButton }
+        }
+    }
+
+    private var pageControls: some View {
+        HStack(spacing: 8) {
+            Button("Previous route", systemImage: "chevron.left") { choose(model.routes[selectedIndex - 1].loop) }
+                .labelStyle(.iconOnly).buttonStyle(.glass).buttonBorderShape(.circle)
+                .frame(minWidth: 44, minHeight: 44).disabled(selectedIndex == 0)
+                .accessibilityIdentifier("previousRoute")
+            Text("\(selectedIndex + 1) of \(model.routes.count)").font(.caption).monospacedDigit()
+                .fixedSize().accessibilityLabel("Route \(selectedIndex + 1) of \(model.routes.count)")
+                .accessibilityIdentifier("routePosition")
+            Button("Next route", systemImage: "chevron.right") { choose(model.routes[selectedIndex + 1].loop) }
+                .labelStyle(.iconOnly).buttonStyle(.glass).buttonBorderShape(.circle)
+                .frame(minWidth: 44, minHeight: 44).disabled(selectedIndex >= model.routes.count - 1)
+                .accessibilityIdentifier("nextRoute")
+        }
+    }
+
+    private var moreRoutesButton: some View {
+        Group {
+            if model.canLoadMore || (model.isLoading && loadingMore) {
+                Button { loadingMore = true; loadID = UUID() } label: {
+                    HStack(spacing: 6) {
+                        if model.isLoading { ProgressView().controlSize(.small) }
+                        Text(model.isLoading ? "Finding more…" : "More routes")
+                    }
+                    .font(.subheadline).padding(.vertical, 4)
+                }
+                .buttonStyle(.glass).buttonBorderShape(.capsule).disabled(model.isLoading)
+                .accessibilityIdentifier("moreRoutes")
+            } else {
+                Text("All routes checked").font(.caption).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("routesExhausted")
+            }
+        }
+    }
+
+    private func reload() { loadingMore = false; loadID = UUID() }
 
     private func choose(_ loop: AustinLoop) {
         withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { selection = loop }
@@ -278,6 +335,13 @@ private struct RouteStopsSheet: View {
                     LabeledContent("Your budget", value: "\(budget) min")
                 }
                 .accessibilityIdentifier("routeTimeBreakdown")
+                if let method = route.stopSelection {
+                    Section("Your stop") {
+                        Text(method.title).font(.subheadline.weight(.medium))
+                            .accessibilityIdentifier("stopSelectionMethod")
+                        Text(method.detail).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
                 Section {
                     ForEach(Array(route.waypoints.enumerated()), id: \.element.id) { index, waypoint in
                         HStack(alignment: .top, spacing: 14) {

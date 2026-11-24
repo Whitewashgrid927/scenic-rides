@@ -11,7 +11,7 @@ final class RoutePreviewTests: XCTestCase {
         screenshot(app, name: "Multiple scenery home")
         app.buttons["findRide"].tap()
         XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["routeCard-7"].label.contains("Water · Hills"))
+        XCTAssertTrue(selectedCard(in: app).label.contains("Water · Hills"))
         app.buttons["closeRoutePreview"].tap()
         XCTAssertTrue(app.buttons["scenery-hills"].isSelected)
         app.buttons["scenery-water"].tap()
@@ -29,13 +29,14 @@ final class RoutePreviewTests: XCTestCase {
         let app = launch()
         app.buttons["findRide"].tap()
         XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["routePage-0"].isSelected)
+        XCTAssertTrue(app.staticTexts["routePosition"].label.contains("1 of"))
         app.scrollViews["routeCards"].swipeLeft()
-        waitSelected(app.buttons["routePage-1"])
-        XCTAssertTrue(app.buttons["routeCard-6"].isSelected)
+        XCTAssertTrue(app.staticTexts["routePosition"].label.contains("2 of"))
+        let name = app.otherElements["routeMap"].value as? String ?? ""
+        XCTAssertFalse(name.isEmpty)
         app.buttons["viewRouteStops"].tap()
         XCTAssertTrue(app.navigationBars["Your route"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["River, hills & skyline"].exists)
+        XCTAssertTrue(app.staticTexts[name].exists)
         let start = app.descendants(matching: .any)["routeStop-0"].firstMatch
         XCTAssertTrue(start.label.contains("Austin, TX"))
         let end = app.descendants(matching: .any)["routeStop-return"].firstMatch
@@ -43,8 +44,8 @@ final class RoutePreviewTests: XCTestCase {
         XCTAssertTrue(end.label.contains("Austin, TX"))
         XCTAssertFalse(app.descendants(matching: .any)["routeStop-optional"].firstMatch.exists)
         app.buttons["Done"].tap()
-        app.buttons["routePage-0"].tap()
-        waitSelected(app.buttons["routePage-0"])
+        app.buttons["previousRoute"].tap()
+        XCTAssertTrue(app.staticTexts["routePosition"].label.contains("1 of"))
     }
 
     @MainActor
@@ -71,18 +72,19 @@ final class RoutePreviewTests: XCTestCase {
         app.buttons["cancelRideOptions"].tap()
         app.buttons["findRide"].tap()
         XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["routeCard-2"].label.contains("20 min stop"))
+        XCTAssertTrue(selectedCard(in: app).label.contains("20 min stop"))
+        let total = selectedTotal(in: app)
         XCTAssertTrue(app.staticTexts["routeTarget"].label.contains("60 min budget"))
         app.buttons["viewRouteStops"].tap()
         XCTAssertTrue(app.staticTexts["Whole trip"].waitForExistence(timeout: 5))
         // Native LabeledContent exposes each row as a combined accessibility label.
         XCTAssertTrue(app.staticTexts["Time at stop, 20 min"].exists)
-        XCTAssertTrue(app.staticTexts["Whole trip, About 54 min"].exists)
+        XCTAssertTrue(app.staticTexts["Whole trip, About \(total) min"].exists)
         XCTAssertTrue(app.staticTexts["Your budget, 60 min"].exists)
         let stop = app.descendants(matching: .any)["routeStop-optional"].firstMatch
         scrollTo(stop, in: app)
         XCTAssertTrue(stop.label.contains("20 min stop"))
-        XCTAssertTrue(stop.label.contains("Mozart"))
+        XCTAssertTrue(["Mozart", "Epoch", "Cherrywood", "Radio"].contains { stop.label.contains($0) })
     }
 
     @MainActor
@@ -126,12 +128,11 @@ final class RoutePreviewTests: XCTestCase {
         let partial = launch(scenario: "partial")
         partial.buttons["findRide"].tap()
         XCTAssertTrue(partial.buttons["viewRouteStops"].waitForExistence(timeout: 15))
-        XCTAssertTrue(partial.buttons["routeCard-6"].isSelected)
+        let selectedID = selectedCard(in: partial).identifier
         partial.buttons["retryRoute"].tap()
         let finished = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: partial.buttons["retryRoute"])
         XCTAssertEqual(XCTWaiter.wait(for: [finished], timeout: 10), .completed)
-        XCTAssertTrue(partial.buttons["routeCard-6"].isSelected)
-        XCTAssertTrue(partial.buttons["routePage-1"].isSelected)
+        XCTAssertTrue(partial.buttons[selectedID].isSelected)
     }
 
     @MainActor
@@ -168,6 +169,75 @@ final class RoutePreviewTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Your route"].waitForExistence(timeout: 5))
     }
 
+    @MainActor
+    func testMoreRoutesPreservesSelectionAndEventuallyFinishes() throws {
+        let app = launch()
+        app.buttons["scenery-water"].tap(); app.buttons["scenery-greenery"].tap()
+        app.buttons["findRide"].tap()
+        XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 15))
+        let original = selectedCard(in: app).identifier
+        XCTAssertEqual(routeCount(in: app), 3)
+        app.buttons["moreRoutes"].tap()
+        waitForMore(in: app)
+        XCTAssertGreaterThan(routeCount(in: app), 3)
+        XCTAssertTrue(app.buttons[original].isSelected)
+        screenshot(app, name: "More routes fixture")
+        for _ in 0..<12 {
+            if !app.buttons["moreRoutes"].exists { break }
+            app.buttons["moreRoutes"].tap(); waitForMore(in: app)
+        }
+        XCTAssertFalse(app.buttons["moreRoutes"].exists)
+        XCTAssertTrue(app.staticTexts["routesExhausted"].exists)
+        XCTAssertTrue(app.buttons[original].isSelected)
+        app.buttons["nextRoute"].tap()
+        XCTAssertTrue(app.staticTexts["routePosition"].label.contains("2 of"))
+    }
+
+    @MainActor
+    func testMoreRoutesFailureCanRetryWithoutLosingSelection() throws {
+        let app = launch(scenario: "moreRetry")
+        app.buttons["findRide"].tap()
+        XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 15))
+        let original = selectedCard(in: app).identifier
+        app.buttons["moreRoutes"].tap(); waitForMore(in: app)
+        XCTAssertTrue(app.buttons["retryRoute"].exists)
+        app.buttons["retryRoute"].tap()
+        let finished = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.buttons["retryRoute"])
+        XCTAssertEqual(XCTWaiter.wait(for: [finished], timeout: 10), .completed)
+        XCTAssertTrue(app.buttons[original].isSelected)
+    }
+
+    @MainActor
+    func testLoadingMoreKeepsCurrentRouteAndCanBeDismissed() throws {
+        let app = launch(scenario: "loadingMore")
+        app.buttons["findRide"].tap()
+        XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 15))
+        let original = selectedCard(in: app).identifier
+        app.buttons["moreRoutes"].tap()
+        XCTAssertTrue(app.buttons[original].isSelected)
+        XCTAssertFalse(app.buttons["moreRoutes"].isEnabled)
+        XCTAssertTrue(app.buttons["viewRouteStops"].isEnabled)
+        app.buttons["closeRoutePreview"].tap()
+        XCTAssertTrue(app.buttons["findRide"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testAIAndFallbackAreClearlyDistinguished() throws {
+        for scenario in ["aiReady", "ready"] {
+            let app = launch(scenario: scenario)
+            app.buttons["rideOptions"].tap()
+            app.segmentedControls["ridePace"].buttons["Include a stop"].tap()
+            app.buttons["applyRideOptions"].tap()
+            app.buttons["findRide"].tap()
+            XCTAssertTrue(app.buttons["viewRouteStops"].waitForExistence(timeout: 15))
+            let expected = scenario == "aiReady" ? "Picked with on-device AI" : "Nearby match · AI unavailable"
+            XCTAssertTrue(selectedCard(in: app).label.contains(expected))
+            app.buttons["viewRouteStops"].tap()
+            XCTAssertEqual(app.staticTexts["stopSelectionMethod"].label, expected)
+            app.terminate()
+        }
+    }
+
     /// Real MapKit: short drive, mixed scenery with coffee, then a longer outing with a walk.
     @MainActor
     func testLiveBudgetsAndMixedSceneryWithStops() throws {
@@ -199,11 +269,25 @@ final class RoutePreviewTests: XCTestCase {
             }
             app.buttons["fitRoute"].tap()
             screenshot(app, name: "Live \(budget) minute budget")
+            if budget == 30 {
+                let original = selectedCard(in: app).identifier
+                let originalCount = routeCount(in: app)
+                XCTAssertTrue(app.buttons["moreRoutes"].exists)
+                app.buttons["moreRoutes"].tap()
+                XCTAssertTrue(app.staticTexts["moreRoutesMessage"].waitForExistence(timeout: 120))
+                XCTAssertTrue(app.buttons[original].isSelected)
+                XCTAssertGreaterThanOrEqual(routeCount(in: app), originalCount)
+                for total in app.staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH %@", "routeTotal-")).allElementsBoundByIndex {
+                    let minutes = total.label.split(separator: " ").compactMap { Int($0) }.first
+                    XCTAssertLessThanOrEqual(minutes ?? 999, budget)
+                }
+                screenshot(app, name: "Live more routes")
+            }
             if budget > 30 {
                 app.buttons["viewRouteStops"].tap()
                 let stop = app.descendants(matching: .any)["routeStop-optional"].firstMatch
                 scrollTo(stop, in: app)
-                XCTAssertTrue(stop.label.contains(budget == 60 ? "Mozart" : "Butler Park"))
+                XCTAssertFalse(stop.label.isEmpty)
                 XCTAssertTrue(stop.label.contains(budget == 60 ? "15 min stop" : "20 min stop"))
                 let end = app.descendants(matching: .any)["routeStop-return"].firstMatch
                 scrollTo(end, in: app)
@@ -213,6 +297,25 @@ final class RoutePreviewTests: XCTestCase {
             }
             app.buttons["closeRoutePreview"].tap()
         }
+    }
+
+    @MainActor
+    private func selectedCard(in app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND selected == true", "routeCard-")).firstMatch
+    }
+    @MainActor
+    private func selectedTotal(in app: XCUIApplication) -> Int {
+        let label = selectedCard(in: app).staticTexts.matching(NSPredicate(format: "identifier BEGINSWITH %@", "routeTotal-")).firstMatch.label
+        return label.split(separator: " ").compactMap { Int($0) }.first ?? -1
+    }
+    @MainActor
+    private func routeCount(in app: XCUIApplication) -> Int {
+        app.staticTexts["routePosition"].label.split(separator: " ").compactMap { Int($0) }.last ?? 0
+    }
+    @MainActor
+    private func waitForMore(in app: XCUIApplication) {
+        let done = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true"), object: app.staticTexts["moreRoutesMessage"])
+        XCTAssertEqual(XCTWaiter.wait(for: [done], timeout: 15), .completed)
     }
 
     @MainActor

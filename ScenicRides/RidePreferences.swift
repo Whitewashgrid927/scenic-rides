@@ -62,7 +62,7 @@ struct RideRequest: Identifiable {
     // Every ride in this version returns to its starting point.
 }
 
-enum Scenery: String, CaseIterable, Identifiable {
+enum Scenery: String, Codable, CaseIterable, Identifiable {
     case water, hills, greenery, city
     var id: String { rawValue }
     var name: String {
@@ -93,7 +93,7 @@ enum RidePace: String, CaseIterable, Identifiable {
     var name: String { self == .drive ? "Just drive" : "Include a stop" }
 }
 
-enum RideStopKind: String, CaseIterable, Identifiable {
+enum RideStopKind: String, Codable, CaseIterable, Identifiable {
     case coffee, view, walk
     var id: String { rawValue }
     var name: String {
